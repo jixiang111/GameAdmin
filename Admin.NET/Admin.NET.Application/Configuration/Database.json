@@ -28,7 +28,7 @@
         //	}
         //],
         "DbSettings": {
-          "EnableInitDb": true, // 启用库初始化（若实体没有变化建议关闭）
+          "EnableInitDb": false, // 启用库初始化（若实体没有变化建议关闭）
           "EnableInitView": true, // 启用视图初始化（若实体和视图没有变化建议关闭）
           "EnableDiffLog": false, // 启用库表差异日志
           "EnableUnderLine": false, // 启用驼峰转下划线
