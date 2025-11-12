@@ -4,7 +4,7 @@ import { useUserInfo } from '/@/stores/userInfo';
 import { useRequestOldRoutes } from '/@/stores/requestOldRoutes';
 import { Session } from '/@/utils/storage';
 import { NextLoading } from '/@/utils/loading';
-import { dynamicRoutes, notFoundAndNoPower } from '/@/router/route';
+import { dynamicRoutes, notFoundAndNoPower, serverManageMenuRaw, clientVersionMenuRaw } from '/@/router/route';
 import { formatTwoStageRoutes, formatFlatteningRoutes, router } from '/@/router/index';
 import { useRoutesList } from '/@/stores/routesList';
 import { useTagsViewRoutes } from '/@/stores/tagsViewRoutes';
@@ -33,29 +33,57 @@ const dynamicViewsModules: Record<string, Function> = Object.assign({}, { ...lay
  * @method setFilterMenuAndCacheTagsViewRoutes 设置路由到 pinia routesList 中（已处理成多级嵌套路由）及缓存多级嵌套数组处理后的一维数组
  */
 export async function initBackEndControlRoutes() {
+
 	// 界面 loading 动画开始执行
+
 	if (window.nextLoading === undefined) NextLoading.start();
+
 	// 无 token 停止执行下一步
+
 	if (!Session.get('token')) return false;
+
 	// 触发初始化用户信息 pinia
+
 	// https://gitee.com/lyt-top/vue-next-admin/issues/I5F1HP
+
 	await useUserInfo().setUserInfos();
+
 	await useUserInfo().setConstList();
+
 	await useUserInfo().setDictList();
-	// 获取路由菜单数据
-	const res = await getBackEndControlRoutes();
+
+	// 获取路由菜单数据并强制追加服务器管理入口
+
+	const rawRoutes = await getBackEndControlRoutes();
+
+	const sanitizedRoutes = removeDisabledMenus(rawRoutes);
+	const res = ensureBaseWorkbenchMenus(sanitizedRoutes);
+
 	// 无登录权限时，添加判断
+
 	// https://gitee.com/lyt-top/vue-next-admin/issues/I64HVO
+
 	if (res == undefined || res.length <= 0) return Promise.resolve(true);
+
 	// 存储接口原始路由（未处理component），根据需求选择使用
+
 	useRequestOldRoutes().setRequestOldRoutes(res as string[]);
+
 	// 处理路由（component），替换 dynamicRoutes（/@/router/route）第一个顶级 children 的路由
+
 	dynamicRoutes[0].children = await backEndComponent(res);
+
 	// 添加动态路由
+
 	await setAddRoute();
-	// 设置路由到 pinia routesList 中（已处理成多级嵌套路由）及缓存多级嵌套数组处理后的一维数组
+
+	// 设置路由到 pinia routesList 中（已处理成多级嵌套路由）及缓存多级嵌套数组处理后的一维数据
+
 	setFilterMenuAndCacheTagsViewRoutes();
+
 }
+
+
 
 /**
  * 设置路由到 pinia routesList 中（已处理成多级嵌套路由）及缓存多级嵌套数组处理后的一维数组
@@ -118,6 +146,61 @@ export async function getBackEndControlRoutes() {
 	// }
 	return res.data.result;
 }
+
+/**
+
+ * 追加服务器管理菜单项，确保前端始终可见
+
+ */
+
+const DISABLED_MENU_NAMES = ['develop', 'doc'];
+const DISABLED_MENU_TITLES = ['开发工具', '帮助文档'];
+const BASE_WORKBENCH_MENUS = [serverManageMenuRaw, clientVersionMenuRaw];
+
+function ensureBaseWorkbenchMenus(routes: any) {
+	const list = Array.isArray(routes) ? [...routes] : [];
+	const workbenchIndex = list.findIndex((route) => route?.name === 'dashboard' || route?.path === '/dashboard');
+	let insertIndex = workbenchIndex;
+
+	BASE_WORKBENCH_MENUS.forEach((menu) => {
+		const existsIndex = list.findIndex((route) => route?.path === menu.path || route?.name === menu.name);
+		if (existsIndex > -1) {
+			if (existsIndex > insertIndex) insertIndex = existsIndex;
+			return;
+		}
+		const cloneMenu = JSON.parse(JSON.stringify(menu));
+		if (insertIndex > -1) {
+			list.splice(insertIndex + 1, 0, cloneMenu);
+			insertIndex += 1;
+		} else {
+			list.push(cloneMenu);
+			insertIndex = list.length - 1;
+		}
+	});
+
+	return list;
+}
+
+function removeDisabledMenus(routes: any) {
+	if (!Array.isArray(routes)) return [];
+	const deepFilter = (items: any[]) => {
+		return (items || [])
+			.filter((item) => {
+				const blockByName = DISABLED_MENU_NAMES.includes(item?.name);
+				const blockByTitle = DISABLED_MENU_TITLES.includes(item?.title);
+				return !(blockByName || blockByTitle);
+			})
+			.map((item) => {
+				if (Array.isArray(item.children) && item.children.length > 0) {
+					item.children = deepFilter(item.children);
+				}
+				return item;
+			});
+	};
+	return deepFilter(routes);
+}
+
+
 
 /**
  * 重新请求后端路由菜单接口

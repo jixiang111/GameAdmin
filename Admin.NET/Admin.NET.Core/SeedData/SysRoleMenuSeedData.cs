@@ -26,8 +26,8 @@ public class SysRoleMenuSeedData : ISqlSugarEntitySeedData<SysRoleMenu>
         // 第一个角色拥有全部默认租户菜单
         roleMenuList.AddRange(defaultMenuList.Select(u => new SysRoleMenu { Id = u.MenuId + (roleList[0].Id % 1300000000000), RoleId = roleList[0].Id, MenuId = u.MenuId }));
 
-        // 其他角色权限：工作台、系统管理、个人中心、帮助文档、关于项目
-        var otherRoleMenuList = menuList.ToChildList(u => u.Id, u => u.Pid, u => new[] { "工作台", "帮助文档", "关于项目", "个人中心" }.Contains(u.Title)).ToList();
+        // 其他角色权限：工作台、系统管理、个人中心、关于项目
+        var otherRoleMenuList = menuList.ToChildList(u => u.Id, u => u.Pid, u => new[] { "工作台", "关于项目", "个人中心" }.Contains(u.Title)).ToList();
         otherRoleMenuList.Add(menuList.First(u => u.Type == MenuTypeEnum.Dir && u.Title == "系统管理"));
         foreach (var role in roleList.Skip(1)) roleMenuList.AddRange(otherRoleMenuList.Select(u => new SysRoleMenu { Id = u.Id + (role.Id % 1300000000000), RoleId = role.Id, MenuId = u.Id }));
 

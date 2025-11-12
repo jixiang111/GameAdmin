@@ -41,6 +41,21 @@
     "WithExposedHeaders": [ "Content-Disposition", "X-Pagination", "access-token", "x-access-token", "Access-Control-Expose-Headersx-access-token" ], // 如果前端不代理且是axios请求
     "SignalRSupport": true // 启用 SignalR 跨域支持
   },
+  // GM RPC 配置
+  "GmRpc": {
+    "CenterServer": {
+      "Address": "http://127.0.0.1:30001",
+      "Token": "gm-secret-token",
+      "AllowUntrustedCertificate": false,
+      "UseTls": false
+    },
+    "GameServer": {
+      "Address": "",
+      "Token": "",
+      "AllowUntrustedCertificate": false,
+      "UseTls": true
+    }
+  },
   // 定时任务/作业调度
   "JobSchedule": {
     "Enabled": true // 是否开启

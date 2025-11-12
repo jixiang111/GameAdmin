@@ -1,22 +1,5 @@
 import { RouteRecordRaw } from 'vue-router';
 
-/**
- * 建议：路由 path 路径与文件夹名称相同，找文件可浏览器地址找，方便定位文件位置
- *
- * 路由meta对象参数说明
- * meta: {
- *      title:          菜单栏及 tagsView 栏、菜单搜索名称（国际化）
- *      isLink：        是否超链接菜单，开启外链条件，`1、isLink: 链接地址不为空 2、isIframe:false`
- *      isHide：        是否隐藏此路由
- *      isKeepAlive：   是否缓存组件状态
- *      isAffix：       是否固定在 tagsView 栏上
- *      isIframe：      是否内嵌窗口，开启条件，`1、isIframe:true 2、isLink：链接地址不为空`
- *      roles：         当前路由权限标识，取角色管理。控制路由显示、隐藏。超级管理员：admin 普通角色：common
- *      icon：          菜单、tagsView 图标，阿里：加 `iconfont xxx`，fontawesome：加 `fa xxx`
- * }
- */
-
-// 扩展 RouteMeta 接口
 declare module 'vue-router' {
 	interface RouteMeta {
 		title?: string;
@@ -31,13 +14,133 @@ declare module 'vue-router' {
 	}
 }
 
-/**
- * 定义动态路由
- * 前端添加路由，请在顶级节点的 `children 数组` 里添加
- * @description 未开启 isRequestRoutes 为 true 时使用（前端控制路由），开启时第一个顶级 children 的路由将被替换成接口请求回来的路由数据
- * @description 各字段请查看 `/@/views/system/menu/component/addMenu.vue 下的 ruleForm`
- * @returns 返回路由菜单数据
- */
+export const serverManageRoute: RouteRecordRaw = {
+	path: '/dashboard/server-manage',
+	name: 'gameServerManager',
+	component: () => import('/@/views/workbench/server/index.vue'),
+	meta: {
+		title: '服务器管理',
+		isKeepAlive: true,
+		icon: 'ele-DataLine',
+	},
+};
+
+export const clientVersionRoute: RouteRecordRaw = {
+	path: '/dashboard/client-version',
+	name: 'clientVersion',
+	component: () => import('/@/layout/routerView/parent.vue'),
+	redirect: '/dashboard/client-version/oss',
+	meta: {
+		title: '客户端版本管理',
+		icon: 'ele-Setting',
+	},
+	children: [
+		{
+			path: '/dashboard/client-version/oss',
+			name: 'clientVersionOss',
+			component: () => import('/@/views/workbench/clientVersion/ossConfig.vue'),
+			meta: {
+				title: 'OSS 参数设置',
+				isKeepAlive: true,
+			},
+		},
+		{
+			path: '/dashboard/client-version/whitelist',
+			name: 'clientVersionWhitelist',
+			component: () => import('/@/views/workbench/clientVersion/whitelist.vue'),
+			meta: {
+				title: '白名单设置',
+				isKeepAlive: true,
+			},
+		},
+		{
+			path: '/dashboard/client-version/channel',
+			name: 'clientVersionChannel',
+			component: () => import('/@/views/workbench/clientVersion/channel.vue'),
+			meta: {
+				title: '渠道版本管理',
+				isKeepAlive: true,
+			},
+		},
+	],
+};
+
+export const serverManageMenuRaw = {
+	id: 0,
+	pid: 0,
+	type: 2,
+	name: 'gameServerManager',
+	path: '/dashboard/server-manage',
+	component: '/workbench/server/index',
+	permission: 'gameServerAddress:list',
+	orderNo: 101,
+	status: 1,
+	meta: {
+		title: '服务器管理',
+		icon: 'ele-DataLine',
+		isKeepAlive: true,
+		isHide: false,
+		isIframe: false,
+	},
+	children: [],
+};
+
+export const clientVersionMenuRaw = {
+	id: 0,
+	pid: 0,
+	type: 1,
+	name: 'clientVersion',
+	path: '/dashboard/client-version',
+	component: 'layout/routerView/parent',
+	orderNo: 102,
+	meta: {
+		title: '客户端版本管理',
+		icon: 'ele-Setting',
+		isKeepAlive: true,
+	},
+	children: [
+		{
+			id: 0,
+			pid: 0,
+			type: 2,
+			name: 'clientVersionOss',
+			path: '/dashboard/client-version/oss',
+			component: '/workbench/clientVersion/ossConfig',
+			meta: {
+				title: 'OSS 参数设置',
+				icon: 'ele-Connection',
+				isKeepAlive: true,
+			},
+		},
+		{
+			id: 0,
+			pid: 0,
+			type: 2,
+			name: 'clientVersionWhitelist',
+			path: '/dashboard/client-version/whitelist',
+			component: '/workbench/clientVersion/whitelist',
+			meta: {
+				title: '白名单设置',
+				icon: 'ele-List',
+				isKeepAlive: true,
+			},
+		},
+		{
+			id: 0,
+			pid: 0,
+			type: 2,
+			name: 'clientVersionChannel',
+			path: '/dashboard/client-version/channel',
+			component: '/workbench/clientVersion/channel',
+			meta: {
+				title: '渠道版本管理',
+				icon: 'ele-Operation',
+				isKeepAlive: true,
+			},
+		},
+	],
+};
+
 export const dynamicRoutes: Array<RouteRecordRaw> = [
 	{
 		path: '/',
@@ -47,7 +150,7 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 		meta: {
 			isKeepAlive: true,
 		},
-		children: [],
+		children: [serverManageRoute, clientVersionRoute],
 	},
 	{
 		path: '/platform/job/dashboard',
@@ -72,16 +175,11 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 			isHide: true,
 			isKeepAlive: true,
 			isAffix: false,
-			// isIframe: true,
 			icon: 'ele-View',
 		},
 	},
 ];
 
-/**
- * 定义404、401界面
- * @link 参考：https://next.router.vuejs.org/zh/guide/essentials/history-mode.html#netlify
- */
 export const notFoundAndNoPower = [
 	{
 		path: '/:path(.*)*',
@@ -103,12 +201,6 @@ export const notFoundAndNoPower = [
 	},
 ];
 
-/**
- * 定义静态路由（默认路由）
- * 此路由不要动，前端添加路由的话，请在 `dynamicRoutes 数组` 中添加
- * @description 前端控制直接改 dynamicRoutes 中的路由，后端控制不需要修改，请求接口路由数据时，会覆盖 dynamicRoutes 第一个顶级 children 的内容（全屏，不包含 layout 中的路由出口）
- * @returns 返回路由菜单数据
- */
 export const staticRoutes: Array<RouteRecordRaw> = [
 	{
 		path: '/login',
@@ -118,7 +210,8 @@ export const staticRoutes: Array<RouteRecordRaw> = [
 			title: '登录',
 			isPublic: true,
 		},
-	},{
+	},
+	{
 		path: '/$callTel',
 		name: '$callTel',
 		component: () => import('/@/components/callTel/index.vue'),
@@ -127,24 +220,4 @@ export const staticRoutes: Array<RouteRecordRaw> = [
 			isPublic: true,
 		},
 	},
-	/**
-	 * 提示：写在这里的为全屏界面，不建议写在这里
-	 * 请写在 `dynamicRoutes` 路由数组中
-	 */
-	// {
-	// 	path: '/visualizingDemo1',
-	// 	name: 'visualizingDemo1',
-	// 	component: () => import('/@/views/visualizing/demo1.vue'),
-	// 	meta: {
-	// 		title: 'message.router.visualizingLinkDemo1',
-	// 	},
-	// },
-	// {
-	// 	path: '/visualizingDemo2',
-	// 	name: 'visualizingDemo2',
-	// 	component: () => import('/@/views/visualizing/demo2.vue'),
-	// 	meta: {
-	// 		title: 'message.router.visualizingLinkDemo2',
-	// 	},
-	// },
 ];

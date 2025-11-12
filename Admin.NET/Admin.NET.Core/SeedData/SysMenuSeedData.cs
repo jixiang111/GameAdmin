@@ -89,6 +89,21 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
             new SysMenu{ Id=1300200070401, Pid=1300200070101, Title="增加", Permission="sysWechatUser:add", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
             new SysMenu{ Id=1300200070501, Pid=1300200070101, Title="删除", Permission="sysWechatUser:delete", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
 
+            new SysMenu{ Id=1300209000101, Pid=1300200000101, Title="客户端版本管理", Path="/clientVersion", Name="clientVersion", Component="Layout", Icon="ele-Cloudy", Type=MenuTypeEnum.Dir, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=180 },
+            new SysMenu{ Id=1300209000201, Pid=1300209000101, Title="OSS 凭证配置", Path="/clientVersion/oss", Name="clientVersionOss", Component="/clientVersion/oss/index", Icon="ele-Connection", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=10 },
+            new SysMenu{ Id=1300209000202, Pid=1300209000201, Title="保存", Permission="clientVersion:ossConfig:save", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
+            new SysMenu{ Id=1300209000301, Pid=1300209000101, Title="测试白名单", Path="/clientVersion/whitelist", Name="clientVersionWhitelist", Component="/clientVersion/whitelist/index", Icon="ele-List", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=20 },
+            new SysMenu{ Id=1300209000302, Pid=1300209000301, Title="查询", Permission="clientVersionWhitelist:page", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
+            new SysMenu{ Id=1300209000303, Pid=1300209000301, Title="保存", Permission="clientVersionWhitelist:save", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=101 },
+            new SysMenu{ Id=1300209000304, Pid=1300209000301, Title="删除", Permission="clientVersionWhitelist:delete", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=102 },
+            new SysMenu{ Id=1300209000401, Pid=1300209000101, Title="渠道版本规则", Path="/clientVersion/rule", Name="clientVersionRule", Component="/clientVersion/rule/index", Icon="ele-SetUp", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=30 },
+            new SysMenu{ Id=1300209000402, Pid=1300209000401, Title="查询", Permission="clientVersionRule:list", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
+            new SysMenu{ Id=1300209000403, Pid=1300209000401, Title="保存", Permission="clientVersionRule:save", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=101 },
+            new SysMenu{ Id=1300209000404, Pid=1300209000401, Title="删除", Permission="clientVersionRule:delete", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=102 },
+            new SysMenu{ Id=1300209000405, Pid=1300209000401, Title="发布", Permission="clientVersionRule:promote", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=103 },
+            new SysMenu{ Id=1300209000406, Pid=1300209000401, Title="列出 AppVersion", Permission="clientVersionRule:appVersions", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=104 },
+            new SysMenu{ Id=1300209000407, Pid=1300209000401, Title="列出资源版本", Permission="clientVersionRule:resVersions", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=105 },
+
             // AD域配置
             new SysMenu{ Id=1300200080101, Pid=1300200000101, Title="AD域配置", Path="/system/ldap", Name="sysLdap", Component="/system/ldap/index",Icon="ele-Place", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=170 },
             new SysMenu{ Id=1300200080201, Pid=1300200080101, Title="查询", Permission="sysLdap:page", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
@@ -282,29 +297,6 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
             new SysMenu{ Id=1300400040301, Pid=1300400040101, Title="清空", Permission="sysDifflog:clear", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
 
             #endregion 日志管理
-
-            #region 开发工具
-
-            // 开发工具
-            new SysMenu{ Id=1300500000101, Pid=0, Title="开发工具", Path="/develop", Name="develop", Component="Layout", Icon="ele-Cpu", Type=MenuTypeEnum.Dir, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=13000 },
-            new SysMenu{ Id=1300500010101, Pid=1300500000101, Title="库表管理", Path="/develop/database", Name="sysDatabase", Component="/system/database/index",Icon="ele-Coin", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
-            new SysMenu{ Id=1300500020101, Pid=1300500000101, Title="代码生成", Path="/develop/codeGen", Name="sysCodeGen", Component="/system/codeGen/index", Icon="ele-Crop", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=110 },
-            new SysMenu{ Id=1300500030101, Pid=1300500000101, Title="表单设计", Path="/develop/formDes", Name="sysFormDes", Component="/system/formDes/index", Icon="ele-Edit", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=120 },
-            new SysMenu{ Id=1300500040101, Pid=1300500000101, Title="接口压测", Path="/develop/stressTest", Name="SysStressTest", Component="/system/stressTest/index", Icon="ele-DataLine", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=130 },
-            new SysMenu{ Id=1300500050101, Pid=1300500000101, Title="系统接口", Path="/develop/api", Name="sysApi", Component="layout/routerView/iframe", IsIframe=true, OutLink="http://localhost:5005", Icon="ele-Help", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=140 },
-
-            #endregion 开发工具
-
-            #region 帮助文档
-
-            // 帮助文档
-            new SysMenu{ Id=1300600000101, Pid=0, Title="帮助文档", Path="/doc", Name="doc", Component="Layout", Icon="ele-Notebook", Type=MenuTypeEnum.Dir, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=14000 },
-            new SysMenu{ Id=1300600010101, Pid=1300600000101, Title="框架教程", Path="/doc/admin", Name="sysAdmin", Component="layout/routerView/link", IsIframe=false, IsKeepAlive=false, OutLink="http://101.43.53.74:5050/", Icon="ele-Sunny", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
-            new SysMenu{ Id=1300600020101, Pid=1300600000101, Title="后台教程", Path="/doc/furion", Name="sysFurion", Component="layout/routerView/link", IsIframe=false, IsKeepAlive=false, OutLink="https://furion.baiqian.ltd/", Icon="ele-Promotion", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=110 },
-            new SysMenu{ Id=1300600030101, Pid=1300600000101, Title="前端教程", Path="/doc/element", Name="sysElement", Component="layout/routerView/link", IsIframe=false, IsKeepAlive=false, OutLink="https://element-plus.gitee.io/zh-CN/", Icon="ele-Position", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=120 },
-            new SysMenu{ Id=1300600040101, Pid=1300600000101, Title="SqlSugar", Path="/doc/SqlSugar", Name="sysSqlSugar", Component="layout/routerView/link", IsIframe=false, IsKeepAlive=false, OutLink="https://www.donet5.com/Home/Doc", Icon="ele-Coin", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=130 },
-
-	        #endregion 帮助文档
 
             // 关于项目
             new SysMenu{ Id=1300700000101, Pid=0, Title="关于项目", Path="/about", Name="about", Component="/about/index", Icon="ele-InfoFilled", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2023-03-12 00:00:00"), OrderNo=15000 },

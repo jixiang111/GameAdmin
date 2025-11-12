@@ -6,6 +6,7 @@
 
 using Admin.NET.Core;
 using Admin.NET.Core.ElasticSearch;
+using Admin.NET.Application.GmRpc;
 using Admin.NET.Core.Service;
 using AspNetCoreRateLimit;
 using Furion;
@@ -85,6 +86,9 @@ public class Startup : AppStartup
         // 脱敏检测
         services.AddSensitiveDetection();
 
+        // GM RPC 客户端
+        services.AddSingleton<ICenterServerRpcClient, CenterServerRpcClient>();
+        
         // Json序列化设置
         static void SetNewtonsoftJsonSetting(JsonSerializerSettings setting)
         {
