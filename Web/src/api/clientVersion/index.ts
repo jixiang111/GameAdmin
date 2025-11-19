@@ -1,129 +1,270 @@
 import request from '/@/utils/request';
 
-export enum ClientVersionApi {
-	OssConfig = '/api/client/version/oss-config',
-	WhitelistPage = '/api/client/version/whitelist/page',
-	WhitelistAdd = '/api/client/version/whitelist/add',
-	WhitelistUpdate = '/api/client/version/whitelist/update',
-	WhitelistDelete = '/api/client/version/whitelist/delete',
-	ChannelList = '/api/client/version/channel/page',
-	ChannelSave = '/api/client/version/channel/save',
-	ChannelPublish = '/api/client/version/channel/publish',
-	VersionOptions = '/api/client/version/options',
-	ChannelOptions = '/api/client/version/channel/options',
-}
+// ==================== 类型定义 ====================
 
-export interface OssConfig {
+export interface ClientOssConfigOutput {
+	provider: string;
 	accessKeyId: string;
-	accessKeySecret: string;
+	accessKeySecretMasked: string;
 	endpoint: string;
-	bucket: string;
-	basePath?: string;
+	bucketName: string;
+	rootPath: string;
+	resourceDomain?: string;
+	region?: string;
+	isDefault: boolean;
+	remark?: string;
 }
 
-export interface WhitelistItem {
-	id?: number;
+export interface ClientOssConfigInput {
+	provider?: string;
+	accessKeyId: string;
+	accessKeySecret?: string;
+	endpoint: string;
+	bucketName: string;
+	rootPath?: string;
+	resourceDomain?: string;
+	region?: string;
+	isDefault?: boolean;
+	remark?: string;
+}
+
+export interface ClientWhitelistOutput {
+	entryId: string;
 	machineCode: string;
 	remark?: string;
-	updatedTime?: string;
+	tags?: string[];
+	enabled: boolean;
+	createdBy?: string;
+	createTime?: string;
+	updateTime?: string;
 }
 
-export interface ChannelOption {
-	id: number;
-	name: string;
-	code: string;
+export interface ClientWhitelistUpsertInput {
+	entryId?: string;
+	machineCode: string;
+	remark?: string;
+	tags?: string[];
+	enabled: boolean;
 }
 
-export interface VersionResourceOption {
+export interface ClientWhitelistPageInput {
+	pageNo: number;
+	pageSize: number;
+	keyword?: string;
+	tag?: string;
+	onlyEnabled?: boolean;
+}
+
+export interface ClientAppVersionInfoDto {
 	appVersion: string;
-	resources: string[];
+	resVersion: string;
+	resVersionTimestamp?: number;
+	resVersionFileSize?: number;
+	updateUrl?: string;
+	updateNotice?: string;
+	loginUrl?: string;
+	description?: string;
+	forceUpdate: boolean;
 }
 
-export interface ChannelVersionItem {
-	id?: number;
-	channelId: number | null;
-	channelName?: string;
-	platform: 'Android' | 'iOS' | 'WebGL';
-	whiteAppVersion?: string;
-	whiteResourceVersion?: string;
-	releaseAppVersion?: string;
-	releaseResourceVersion?: string;
-	resourceBucket?: string;
-	whitelistIds?: number[];
-	updatedTime?: string;
+export interface ClientVersionRuleOutput {
+	ruleId: string;
+	channelId: string;
+	channelName: string;
+	platform: ClientPlatform;
+	bucketName: string;
+	rootPath: string;
+	resourceDomain?: string;
+	generalVersionInfo?: ClientAppVersionInfoDto;
+	whitelistVersionInfo?: ClientAppVersionInfoDto;
+	whitelistTesterEntryIds: string[];
+	whitelistMachineCodes: string[];
+	latestPublishTime?: string;
+	latestPublishUserName?: string;
+	latestPublishResVersion?: string;
+	createTime?: string;
+	updateTime?: string;
 }
 
-export const getOssConfig = () =>
-	request({
-		url: ClientVersionApi.OssConfig,
+export interface ClientVersionRuleSaveInput {
+	ruleId?: string;
+	channelId: string;
+	channelName: string;
+	platform: ClientPlatform;
+	bucketName: string;
+	rootPath?: string;
+	resourceDomain?: string;
+	generalVersionInfo?: ClientAppVersionInfoDto;
+	whitelistVersionInfo?: ClientAppVersionInfoDto;
+	whitelistTesterEntryIds?: string[];
+}
+
+export interface ChannelAppVersionItem {
+	appVersion: string;
+	folder: string;
+	lastModified?: string;
+}
+
+export interface ChannelResVersionItem {
+	fileName: string;
+	timestamp?: number;
+	fileSize?: number;
+	lastModified?: string;
+	isNewerThanOnline: boolean;
+	downloadUrl: string;
+}
+
+export enum ClientPlatform {
+	Android = 'android',
+	Ios = 'ios',
+	Mini = 'mini',
+}
+
+export interface PromoteWhitelistVersionInput {
+	ruleId: string;
+	targetResVersion?: string;
+	confirm: boolean;
+}
+
+// ==================== API 接口 ====================
+
+/**
+ * 获取 OSS 配置
+ */
+export const getOssConfig = (provider = 'aliyun') =>
+	request<ClientOssConfigOutput>({
+		url: '/api/clientVersion/oss-config',
 		method: 'get',
+		params: { provider },
 	});
 
-export const saveOssConfig = (data: OssConfig) =>
+/**
+ * 保存 OSS 配置
+ */
+export const saveOssConfig = (data: ClientOssConfigInput) =>
 	request({
-		url: ClientVersionApi.OssConfig,
+		url: '/api/clientVersion/oss-config',
 		method: 'post',
 		data,
 	});
 
-export const getWhitelistPage = (params?: { page?: number; pageSize?: number; keyword?: string }) =>
-	request({
-		url: ClientVersionApi.WhitelistPage,
+/**
+ * 获取白名单分页
+ */
+export const getWhitelistPage = (params: ClientWhitelistPageInput) =>
+	request<{ items: ClientWhitelistOutput[]; total: number }>({
+		url: '/api/clientVersion/whitelist/page',
 		method: 'get',
 		params,
 	});
 
-export const addWhitelistItem = (data: WhitelistItem) =>
-	request({
-		url: ClientVersionApi.WhitelistAdd,
-		method: 'post',
-		data,
-	});
-
-export const updateWhitelistItem = (data: WhitelistItem) =>
-	request({
-		url: ClientVersionApi.WhitelistUpdate,
-		method: 'post',
-		data,
-	});
-
-export const deleteWhitelistItem = (id: number) =>
-	request({
-		url: ClientVersionApi.WhitelistDelete,
-		method: 'post',
-		data: { id },
-	});
-
-export const getChannelVersionPage = (params?: { page?: number; pageSize?: number; channelId?: number }) =>
-	request({
-		url: ClientVersionApi.ChannelList,
+/**
+ * 获取白名单列表（用于下拉选择）
+ */
+export const getWhitelistList = (params?: { entryIds?: string[]; onlyEnabled?: boolean }) =>
+	request<ClientWhitelistOutput[]>({
+		url: '/api/clientVersion/whitelist/list',
 		method: 'get',
 		params,
 	});
 
-export const saveChannelVersion = (data: ChannelVersionItem) =>
-	request({
-		url: ClientVersionApi.ChannelSave,
+/**
+ * 保存白名单（新增/编辑）
+ */
+export const saveWhitelist = (data: ClientWhitelistUpsertInput) =>
+	request<ClientWhitelistOutput>({
+		url: '/api/clientVersion/whitelist/save',
 		method: 'post',
 		data,
 	});
 
-export const publishChannelVersion = (data: { id: number }) =>
+/**
+ * 删除白名单
+ */
+export const deleteWhitelist = (entryId: string) =>
 	request({
-		url: ClientVersionApi.ChannelPublish,
+		url: '/api/clientVersion/whitelist/delete',
+		method: 'post',
+		data: { entryId },
+	});
+
+/**
+ * 获取版本规则列表
+ */
+export const getRuleList = (params?: { channelId?: string; platform?: ClientPlatform }) =>
+	request<ClientVersionRuleOutput[]>({
+		url: '/api/clientVersion/rule/list',
+		method: 'get',
+		params,
+	});
+
+/**
+ * 获取版本规则详情
+ */
+export const getRuleDetail = (ruleId: string) =>
+	request<ClientVersionRuleOutput>({
+		url: '/api/clientVersion/rule/detail',
+		method: 'get',
+		params: { ruleId },
+	});
+
+/**
+ * 保存版本规则
+ */
+export const saveRule = (data: ClientVersionRuleSaveInput) =>
+	request<ClientVersionRuleOutput>({
+		url: '/api/clientVersion/rule/save',
 		method: 'post',
 		data,
 	});
 
-export const getVersionOptions = (channelId: number, platform: string) =>
+/**
+ * 删除版本规则
+ */
+export const deleteRule = (ruleId: string) =>
 	request({
-		url: ClientVersionApi.VersionOptions,
-		method: 'get',
-		params: { channelId, platform },
+		url: '/api/clientVersion/rule/delete',
+		method: 'post',
+		data: { ruleId },
 	});
 
-export const getChannelOptions = () =>
-	request({
-		url: ClientVersionApi.ChannelOptions,
+/**
+ * 获取可选的 AppVersion 列表
+ */
+export const getAppVersions = (params: {
+	channelId: string;
+	platform: ClientPlatform;
+	bucketName?: string;
+	rootPath?: string;
+}) =>
+	request<ChannelAppVersionItem[]>({
+		url: '/api/clientVersion/rule/appVersions',
 		method: 'get',
+		params,
+	});
+
+/**
+ * 获取可选的资源版本列表
+ */
+export const getResVersions = (params: {
+	channelId: string;
+	platform: ClientPlatform;
+	appVersion: string;
+	bucketName?: string;
+	rootPath?: string;
+}) =>
+	request<ChannelResVersionItem[]>({
+		url: '/api/clientVersion/rule/resVersions',
+		method: 'get',
+		params,
+	});
+
+/**
+ * 白名单版本一键发布为正式版
+ */
+export const promoteWhitelist = (data: PromoteWhitelistVersionInput) =>
+	request<ClientVersionRuleOutput>({
+		url: '/api/clientVersion/rule/promote',
+		method: 'post',
+		data,
 	});

@@ -28,6 +28,12 @@ public interface ICenterServerRpcClient
     Task<IReadOnlyList<CenterServerInfoDto>> GetGameServerListAsync(CancellationToken cancellationToken = default);
 
     Task<CenterServerInfoDto> UpsertGameServerAsync(CenterServerUpdateReq request, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CenterVersionRuleDto>> ListAppVersionRulesAsync(CancellationToken cancellationToken = default);
+
+    Task<CenterVersionRuleDto> UpsertAppVersionRuleAsync(CenterVersionRuleReq request, CancellationToken cancellationToken = default);
+
+    Task DeleteAppVersionRuleAsync(string ruleId, CancellationToken cancellationToken = default);
 }
 
 public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, IDisposable
@@ -66,6 +72,33 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
         var result = await client.UpdateGameServer(request);
         EnsureRpcSuccess(result?.Success ?? false, result?.Message, "更新游戏服失败");
         return result?.Data;
+    }
+
+    public async Task<IReadOnlyList<CenterVersionRuleDto>> ListAppVersionRulesAsync(CancellationToken cancellationToken = default)
+    {
+        var client = DecorateClient(CreateClient(), cancellationToken);
+        var result = await client.ListAppVersionRules();
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "获取版本规则列表失败");
+        return result?.Items ?? Array.Empty<CenterVersionRuleDto>();
+    }
+
+    public async Task<CenterVersionRuleDto> UpsertAppVersionRuleAsync(CenterVersionRuleReq request, CancellationToken cancellationToken = default)
+    {
+        if (request == null) throw Oops.Oh("请求参数不能为空");
+
+        var client = DecorateClient(CreateClient(), cancellationToken);
+        var result = await client.UpsertAppVersionRule(request);
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "同步版本规则失败");
+        return result?.Data;
+    }
+
+    public async Task DeleteAppVersionRuleAsync(string ruleId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ruleId)) throw Oops.Oh("规则ID不能为空");
+
+        var client = DecorateClient(CreateClient(), cancellationToken);
+        var result = await client.DeleteAppVersionRule(ruleId);
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "删除版本规则失败");
     }
 
     private GrpcChannel CreateChannel()

@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using Aliyun.OSS;
 using Aliyun.OSS.Common;
 using Admin.NET.Application.Service.ClientVersion.Dto;
+using Admin.NET.Application.GmRpc;
 using Furion.FriendlyException;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
@@ -29,6 +30,7 @@ public class ClientVersionService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<ClientVersionRuleWhitelist> _ruleWhitelistRep;
     private readonly UserManager _userManager;
     private readonly ILogger<ClientVersionService> _logger;
+    private readonly ICenterServerRpcClient _rpcClient;
 
     private static readonly Regex ResVersionRegex = new(@"versions_(\d+)\.json", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -41,7 +43,8 @@ public class ClientVersionService : IDynamicApiController, ITransient
         SqlSugarRepository<ClientVersionRule> ruleRep,
         SqlSugarRepository<ClientVersionRuleWhitelist> ruleWhitelistRep,
         UserManager userManager,
-        ILogger<ClientVersionService> logger)
+        ILogger<ClientVersionService> logger,
+        ICenterServerRpcClient rpcClient)
     {
         _ossConfigRep = ossConfigRep;
         _whitelistRep = whitelistRep;
@@ -49,6 +52,7 @@ public class ClientVersionService : IDynamicApiController, ITransient
         _ruleWhitelistRep = ruleWhitelistRep;
         _userManager = userManager;
         _logger = logger;
+        _rpcClient = rpcClient;
     }
 
     #region OSS 配置
@@ -352,7 +356,12 @@ public class ClientVersionService : IDynamicApiController, ITransient
         await PersistRuleWhitelistAsync(entity.Id, input.WhitelistTesterEntryIds);
 
         var output = await BuildRuleOutputsAsync(new[] { entity });
-        return output.First();
+        var result = output.First();
+
+        // 同步到 CenterServer
+        await SyncVersionRuleToCenterAsync(entity, result.WhitelistMachineCodes);
+
+        return result;
     }
 
     /// <summary>
@@ -363,8 +372,12 @@ public class ClientVersionService : IDynamicApiController, ITransient
     public async Task DeleteRule(ClientVersionRuleDeleteInput input)
     {
         var entity = await _ruleRep.GetFirstAsync(u => u.Id == input.RuleId) ?? throw Oops.Oh("规则不存在或已删除");
+
         await _ruleWhitelistRep.DeleteAsync(u => u.RuleId == entity.Id);
         await _ruleRep.DeleteAsync(entity);
+
+        // 从 CenterServer 删除规则
+        await DeleteVersionRuleFromCenterAsync(entity.ChannelId, entity.Platform);
     }
 
     /// <summary>
@@ -436,7 +449,12 @@ public class ClientVersionService : IDynamicApiController, ITransient
         await _ruleRep.UpdateAsync(rule);
 
         var output = await BuildRuleOutputsAsync(new[] { rule });
-        return output.First();
+        var result = output.First();
+
+        // 发布后同步到 CenterServer
+        await SyncVersionRuleToCenterAsync(rule, result.WhitelistMachineCodes);
+
+        return result;
     }
 
     #endregion
@@ -978,6 +996,105 @@ public class ClientVersionService : IDynamicApiController, ITransient
             HasNextPage = source.HasNextPage,
             HasPrevPage = source.HasPrevPage,
             Items = source.Items.Select(selector).ToList()
+        };
+    }
+
+    #endregion
+
+    #region 私有方法 - RPC 同步
+
+    /// <summary>
+    /// 同步版本规则到 CenterServer
+    /// </summary>
+    private async Task SyncVersionRuleToCenterAsync(ClientVersionRule rule, List<string> whitelistMachineCodes)
+    {
+        try
+        {
+            // 同步正式版本规则
+            var generalInfo = DeserializeVersionInfo(rule.GeneralVersionInfoJson);
+            if (generalInfo != null)
+            {
+                var generalRequest = new CenterVersionRuleReq
+                {
+                    RuleId = $"{rule.ChannelId}_{rule.Platform}_General",
+                    ChannelId = rule.ChannelId,
+                    ChannelName = rule.ChannelName,
+                    Platform = GetPlatformString(rule.Platform),
+                    RuleType = ClientVersionRuleType.General,
+                    WhitelistMachineCodes = Array.Empty<string>(),
+                    VersionInfo = new AppVersionInfo
+                    {
+                        AppVersion = generalInfo.AppVersion ?? string.Empty,
+                        ResVersion = generalInfo.ResVersion ?? string.Empty,
+                        UpdateUrl = generalInfo.UpdateUrl ?? string.Empty,
+                        ChannelName = rule.ChannelName,
+                        UpdateNotice = generalInfo.UpdateNotice ?? string.Empty,
+                        LoginUrl = generalInfo.LoginUrl ?? string.Empty
+                    }
+                };
+                await _rpcClient.UpsertAppVersionRuleAsync(generalRequest);
+            }
+
+            // 同步白名单测试版本规则
+            var whitelistInfo = DeserializeVersionInfo(rule.WhitelistVersionInfoJson);
+            if (whitelistInfo != null)
+            {
+                var whitelistRequest = new CenterVersionRuleReq
+                {
+                    RuleId = $"{rule.ChannelId}_{rule.Platform}_Whitelist",
+                    ChannelId = rule.ChannelId,
+                    ChannelName = rule.ChannelName,
+                    Platform = GetPlatformString(rule.Platform),
+                    RuleType = ClientVersionRuleType.Whitelist,
+                    WhitelistMachineCodes = whitelistMachineCodes?.ToArray() ?? Array.Empty<string>(),
+                    VersionInfo = new AppVersionInfo
+                    {
+                        AppVersion = whitelistInfo.AppVersion ?? string.Empty,
+                        ResVersion = whitelistInfo.ResVersion ?? string.Empty,
+                        UpdateUrl = whitelistInfo.UpdateUrl ?? string.Empty,
+                        ChannelName = rule.ChannelName,
+                        UpdateNotice = whitelistInfo.UpdateNotice ?? string.Empty,
+                        LoginUrl = whitelistInfo.LoginUrl ?? string.Empty
+                    }
+                };
+                await _rpcClient.UpsertAppVersionRuleAsync(whitelistRequest);
+            }
+
+            _logger.LogInformation("成功同步版本规则到 CenterServer: ChannelId={ChannelId}, Platform={Platform}", rule.ChannelId, rule.Platform);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "同步版本规则到 CenterServer 失败: ChannelId={ChannelId}, Platform={Platform}", rule.ChannelId, rule.Platform);
+            // 不抛出异常，避免影响主流程
+        }
+    }
+
+    /// <summary>
+    /// 从 CenterServer 删除版本规则
+    /// </summary>
+    private async Task DeleteVersionRuleFromCenterAsync(string channelId, ClientPlatform platform)
+    {
+        try
+        {
+            await _rpcClient.DeleteAppVersionRuleAsync($"{channelId}_{platform}_General");
+            await _rpcClient.DeleteAppVersionRuleAsync($"{channelId}_{platform}_Whitelist");
+            _logger.LogInformation("成功从 CenterServer 删除版本规则: ChannelId={ChannelId}, Platform={Platform}", channelId, platform);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "从 CenterServer 删除版本规则失败: ChannelId={ChannelId}, Platform={Platform}", channelId, platform);
+            // 不抛出异常，避免影响主流程
+        }
+    }
+
+    private static string GetPlatformString(ClientPlatform platform)
+    {
+        return platform switch
+        {
+            ClientPlatform.Android => "Android",
+            ClientPlatform.Ios => "iOS",
+            ClientPlatform.Mini => "Mini",
+            _ => "Android"
         };
     }
 
