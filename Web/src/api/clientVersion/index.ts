@@ -1,4 +1,5 @@
 import request from '/@/utils/request';
+import type { AxiosRequestConfig } from 'axios';
 
 // ==================== 类型定义 ====================
 
@@ -29,7 +30,7 @@ export interface ClientOssConfigInput {
 }
 
 export interface ClientWhitelistOutput {
-	entryId: string;
+	entryId: number | string;
 	machineCode: string;
 	remark?: string;
 	tags?: string[];
@@ -40,7 +41,7 @@ export interface ClientWhitelistOutput {
 }
 
 export interface ClientWhitelistUpsertInput {
-	entryId?: string;
+	entryId?: number | string;
 	machineCode: string;
 	remark?: string;
 	tags?: string[];
@@ -48,7 +49,8 @@ export interface ClientWhitelistUpsertInput {
 }
 
 export interface ClientWhitelistPageInput {
-	pageNo: number;
+	pageNo?: number;
+	page?: number;
 	pageSize: number;
 	keyword?: string;
 	tag?: string;
@@ -68,7 +70,7 @@ export interface ClientAppVersionInfoDto {
 }
 
 export interface ClientVersionRuleOutput {
-	ruleId: string;
+	ruleId: number | string;
 	channelId: string;
 	channelName: string;
 	platform: ClientPlatform;
@@ -77,7 +79,7 @@ export interface ClientVersionRuleOutput {
 	resourceDomain?: string;
 	generalVersionInfo?: ClientAppVersionInfoDto;
 	whitelistVersionInfo?: ClientAppVersionInfoDto;
-	whitelistTesterEntryIds: string[];
+	whitelistTesterEntryIds: Array<number | string>;
 	whitelistMachineCodes: string[];
 	latestPublishTime?: string;
 	latestPublishUserName?: string;
@@ -87,7 +89,7 @@ export interface ClientVersionRuleOutput {
 }
 
 export interface ClientVersionRuleSaveInput {
-	ruleId?: string;
+	ruleId?: number | string;
 	channelId: string;
 	channelName: string;
 	platform: ClientPlatform;
@@ -96,7 +98,7 @@ export interface ClientVersionRuleSaveInput {
 	resourceDomain?: string;
 	generalVersionInfo?: ClientAppVersionInfoDto;
 	whitelistVersionInfo?: ClientAppVersionInfoDto;
-	whitelistTesterEntryIds?: string[];
+	whitelistTesterEntryIds?: Array<number | string>;
 }
 
 export interface ChannelAppVersionItem {
@@ -114,17 +116,40 @@ export interface ChannelResVersionItem {
 	downloadUrl: string;
 }
 
+// 与后端枚举保持一致（数字枚举：1=Android，2=iOS，3=MiniProgram）
 export enum ClientPlatform {
-	Android = 'android',
-	Ios = 'ios',
-	Mini = 'mini',
+	Android = 1,
+	Ios = 2,
+	Mini = 3,
 }
 
 export interface PromoteWhitelistVersionInput {
-	ruleId: string;
+	ruleId: number | string;
 	targetResVersion?: string;
 	confirm: boolean;
 }
+
+// ==================== 辅助方法 ====================
+// 部分接口在不同环境存在路径差异（有的使用中划线/多级路径，有的使用驼峰命名）。
+// 404 时按顺序尝试后备路径，以兼容后台实际路由。
+const requestWithFallback = async <T = any>(config: AxiosRequestConfig, fallbackUrls: string[] = []) => {
+	try {
+		return await request<T>(config);
+	} catch (error: any) {
+		if (error?.response?.status !== 404 || fallbackUrls.length === 0) throw error;
+
+		for (const url of fallbackUrls) {
+			try {
+				return await request<T>({ ...config, url });
+			} catch (err: any) {
+				// 仅对 404 继续尝试下一个后备路径，其余错误直接抛出
+				if (err?.response?.status !== 404) throw err;
+			}
+		}
+
+		throw error;
+	}
+};
 
 // ==================== API 接口 ====================
 
@@ -132,101 +157,137 @@ export interface PromoteWhitelistVersionInput {
  * 获取 OSS 配置
  */
 export const getOssConfig = (provider = 'aliyun') =>
-	request<ClientOssConfigOutput>({
-		url: '/api/clientVersion/oss-config',
-		method: 'get',
-		params: { provider },
-	});
+	requestWithFallback<ClientOssConfigOutput>(
+		{
+			url: '/api/clientVersion/ossConfig',
+			method: 'get',
+			params: { provider },
+		},
+		['/api/clientVersion/oss-config', '/api/clientVersion/getOssConfig']
+	);
 
 /**
  * 保存 OSS 配置
  */
 export const saveOssConfig = (data: ClientOssConfigInput) =>
-	request({
-		url: '/api/clientVersion/oss-config',
-		method: 'post',
-		data,
-	});
+	requestWithFallback(
+		{
+			url: '/api/clientVersion/saveOssConfig',
+			method: 'post',
+			data,
+		},
+		['/api/clientVersion/oss-config', '/api/clientVersion/ossConfig']
+	);
 
 /**
  * 获取白名单分页
  */
-export const getWhitelistPage = (params: ClientWhitelistPageInput) =>
-	request<{ items: ClientWhitelistOutput[]; total: number }>({
-		url: '/api/clientVersion/whitelist/page',
-		method: 'get',
-		params,
-	});
+export const getWhitelistPage = (params: ClientWhitelistPageInput) => {
+	const query: any = { ...params };
+	if (query.pageNo !== undefined) {
+		query.page = query.pageNo;
+		delete query.pageNo;
+	}
+	return requestWithFallback<{ items: ClientWhitelistOutput[]; total: number }>(
+		{
+			url: '/api/clientVersion/whitelistPage',
+			method: 'get',
+			params: query,
+		},
+		['/api/clientVersion/getWhitelistPage', '/api/clientVersion/whitelist/page']
+	);
+};
 
 /**
  * 获取白名单列表（用于下拉选择）
  */
-export const getWhitelistList = (params?: { entryIds?: string[]; onlyEnabled?: boolean }) =>
-	request<ClientWhitelistOutput[]>({
-		url: '/api/clientVersion/whitelist/list',
-		method: 'get',
-		params,
-	});
+export const getWhitelistList = (params?: { entryIds?: Array<number | string>; onlyEnabled?: boolean }) =>
+	requestWithFallback<ClientWhitelistOutput[]>(
+		{
+			url: '/api/clientVersion/whitelistList',
+			method: 'get',
+			params,
+		},
+		['/api/clientVersion/getWhitelistList', '/api/clientVersion/whitelist/list']
+	);
 
 /**
  * 保存白名单（新增/编辑）
  */
 export const saveWhitelist = (data: ClientWhitelistUpsertInput) =>
-	request<ClientWhitelistOutput>({
-		url: '/api/clientVersion/whitelist/save',
-		method: 'post',
-		data,
-	});
+	requestWithFallback<ClientWhitelistOutput>(
+		{
+			url: '/api/clientVersion/saveWhitelist',
+			method: 'post',
+			data,
+		},
+		['/api/clientVersion/whitelist/save']
+	);
 
 /**
  * 删除白名单
  */
-export const deleteWhitelist = (entryId: string) =>
-	request({
-		url: '/api/clientVersion/whitelist/delete',
-		method: 'post',
-		data: { entryId },
-	});
+export const deleteWhitelist = (entryId: number | string) =>
+	requestWithFallback(
+		{
+			url: '/api/clientVersion/deleteWhitelist',
+			method: 'post',
+			data: { entryId },
+		},
+		['/api/clientVersion/whitelist/delete']
+	);
 
 /**
  * 获取版本规则列表
  */
 export const getRuleList = (params?: { channelId?: string; platform?: ClientPlatform }) =>
-	request<ClientVersionRuleOutput[]>({
-		url: '/api/clientVersion/rule/list',
-		method: 'get',
-		params,
-	});
+	requestWithFallback<ClientVersionRuleOutput[]>(
+		{
+			url: '/api/clientVersion/ruleList',
+			method: 'get',
+			params,
+		},
+		['/api/clientVersion/getRuleList', '/api/clientVersion/rule/list']
+	);
 
 /**
  * 获取版本规则详情
  */
-export const getRuleDetail = (ruleId: string) =>
-	request<ClientVersionRuleOutput>({
-		url: '/api/clientVersion/rule/detail',
-		method: 'get',
-		params: { ruleId },
-	});
+export const getRuleDetail = (ruleId: number | string) =>
+	requestWithFallback<ClientVersionRuleOutput>(
+		{
+			url: '/api/clientVersion/ruleDetail',
+			method: 'get',
+			params: { ruleId },
+		},
+		['/api/clientVersion/getRuleDetail', '/api/clientVersion/rule/detail']
+	);
 
 /**
  * 保存版本规则
  */
 export const saveRule = (data: ClientVersionRuleSaveInput) =>
-	request<ClientVersionRuleOutput>({
-		url: '/api/clientVersion/rule/save',
-		method: 'post',
-		data,
-	});
+	requestWithFallback<ClientVersionRuleOutput>(
+		{
+			url: '/api/clientVersion/saveRule',
+			method: 'post',
+			data,
+		},
+		['/api/clientVersion/rule/save']
+	);
 
 /**
  * 删除版本规则
  */
-export const deleteRule = (ruleId: string) =>
-	request({
-		url: '/api/clientVersion/rule/delete',
-		method: 'post',
-		data: { ruleId },
-	});
+export const deleteRule = (ruleId: number | string) =>
+	requestWithFallback(
+		{
+			url: '/api/clientVersion/deleteRule',
+			method: 'post',
+			data: { ruleId },
+		},
+		['/api/clientVersion/rule/delete']
+	);
 
 /**
  * 获取可选的 AppVersion 列表
@@ -237,11 +298,14 @@ export const getAppVersions = (params: {
 	bucketName?: string;
 	rootPath?: string;
 }) =>
-	request<ChannelAppVersionItem[]>({
-		url: '/api/clientVersion/rule/appVersions',
-		method: 'get',
-		params,
-	});
+	requestWithFallback<ChannelAppVersionItem[]>(
+		{
+			url: '/api/clientVersion/appVersions',
+			method: 'get',
+			params,
+		},
+		['/api/clientVersion/getAppVersions', '/api/clientVersion/rule/appVersions']
+	);
 
 /**
  * 获取可选的资源版本列表
@@ -253,18 +317,24 @@ export const getResVersions = (params: {
 	bucketName?: string;
 	rootPath?: string;
 }) =>
-	request<ChannelResVersionItem[]>({
-		url: '/api/clientVersion/rule/resVersions',
-		method: 'get',
-		params,
-	});
+	requestWithFallback<ChannelResVersionItem[]>(
+		{
+			url: '/api/clientVersion/resVersions',
+			method: 'get',
+			params,
+		},
+		['/api/clientVersion/getResVersions', '/api/clientVersion/rule/resVersions']
+	);
 
 /**
  * 白名单版本一键发布为正式版
  */
 export const promoteWhitelist = (data: PromoteWhitelistVersionInput) =>
-	request<ClientVersionRuleOutput>({
-		url: '/api/clientVersion/rule/promote',
-		method: 'post',
-		data,
-	});
+	requestWithFallback<ClientVersionRuleOutput>(
+		{
+			url: '/api/clientVersion/promoteWhitelist',
+			method: 'post',
+			data,
+		},
+		['/api/clientVersion/rule/promote']
+	);

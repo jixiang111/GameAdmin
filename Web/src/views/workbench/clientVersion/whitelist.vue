@@ -131,8 +131,8 @@ const dialogRules: FormRules<ClientWhitelistUpsertInput> = {
 	machineCode: [
 		{ required: true, message: '请输入机器码', trigger: 'blur' },
 		{
-			pattern: /^[A-Z0-9-]{16,128}$/,
-			message: '机器码需16-128位，仅允许大写字母、数字、-',
+			pattern: /^[A-Za-z0-9-_]{16,128}$/,
+			message: '机器码需16-128位，仅允许字母、数字、-、_',
 			trigger: 'blur',
 		},
 	],
@@ -191,7 +191,8 @@ const submitDialog = () => {
 			// 自动转大写并去除空格
 			const saveData: ClientWhitelistUpsertInput = {
 				...dialog.form,
-				machineCode: dialog.form.machineCode.toUpperCase().replace(/\s/g, ''),
+				// 去除空格，保留用户大小写
+				machineCode: dialog.form.machineCode.replace(/\s/g, ''),
 			};
 
 			await saveWhitelist(saveData);

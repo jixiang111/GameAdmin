@@ -28,17 +28,6 @@
 				<el-form-item label="Bucket 名称" prop="bucketName">
 					<el-input v-model="form.bucketName" placeholder="请输入 Bucket 名称" clearable />
 				</el-form-item>
-				<el-form-item label="根路径 (RootPath)">
-					<el-input v-model="form.rootPath" placeholder="默认 /，可选填如 /client-assets" clearable />
-					<el-text class="form-tip">用于OSS目录前缀，格式如 /client-assets</el-text>
-				</el-form-item>
-				<el-form-item label="自定义资源域名">
-					<el-input v-model="form.resourceDomain" placeholder="可选，自定义CDN域名" clearable />
-					<el-text class="form-tip">如已配置CDN，可填写自定义域名，如 https://cdn.example.com</el-text>
-				</el-form-item>
-				<el-form-item label="Region">
-					<el-input v-model="form.region" placeholder="可选，如 cn-hangzhou" clearable />
-				</el-form-item>
 				<el-form-item label="设为默认配置">
 					<el-switch v-model="form.isDefault" />
 				</el-form-item>
@@ -73,7 +62,6 @@ const form = reactive<ClientOssConfigInput>({
 	accessKeySecret: '',
 	endpoint: '',
 	bucketName: '',
-	rootPath: '/',
 	resourceDomain: '',
 	region: '',
 	isDefault: true,
@@ -94,14 +82,11 @@ const loadConfig = async () => {
 		const data = res.data?.result ?? res.data?.data ?? res.data ?? {};
 
 		form.provider = data.provider || 'aliyun';
-		form.accessKeyId = data.accessKeyId || '';
-		form.endpoint = data.endpoint || '';
-		form.bucketName = data.bucketName || '';
-		form.rootPath = data.rootPath || '/';
-		form.resourceDomain = data.resourceDomain || '';
-		form.region = data.region || '';
-		form.isDefault = data.isDefault !== undefined ? data.isDefault : true;
-		form.remark = data.remark || '';
+	form.accessKeyId = data.accessKeyId || '';
+	form.endpoint = data.endpoint || '';
+	form.bucketName = data.bucketName || '';
+	form.isDefault = data.isDefault !== undefined ? data.isDefault : true;
+	form.remark = data.remark || '';
 
 		// 显示掩码后的密钥
 		maskedSecret.value = data.accessKeySecretMasked || '';
@@ -112,12 +97,11 @@ const loadConfig = async () => {
 		const errorMsg = error?.response?.data?.message || error?.message || 'OSS配置加载失败';
 		ElMessage.warning(errorMsg);
 		// 重置表单
-		form.accessKeyId = '';
-		form.endpoint = '';
-		form.bucketName = '';
-		form.rootPath = '/';
-		form.resourceDomain = '';
-		form.region = '';
+	form.accessKeyId = '';
+	form.endpoint = '';
+	form.bucketName = '';
+	form.resourceDomain = '';
+	form.region = '';
 		form.isDefault = true;
 		form.remark = '';
 		maskedSecret.value = '';
@@ -135,6 +119,11 @@ const handleSave = () => {
 			if (!saveData.accessKeySecret) {
 				delete saveData.accessKeySecret;
 			}
+			// RootPath 固定使用后端默认值，不暴露给前端配置
+			delete (saveData as any).rootPath;
+			// 关闭未使用字段
+			delete (saveData as any).resourceDomain;
+			delete (saveData as any).region;
 
 			await saveOssConfig(saveData);
 			ElMessage.success('OSS 配置已保存');

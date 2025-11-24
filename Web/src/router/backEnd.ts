@@ -153,8 +153,8 @@ export async function getBackEndControlRoutes() {
 
  */
 
-const DISABLED_MENU_NAMES = ['develop', 'doc'];
-const DISABLED_MENU_TITLES = ['开发工具', '帮助文档'];
+const DISABLED_MENU_NAMES = ['develop', 'doc', 'clientVersion'];
+const DISABLED_MENU_TITLES = ['开发工具', '帮助文档', '客户端版本管理'];
 const BASE_WORKBENCH_MENUS = [serverManageMenuRaw, clientVersionMenuRaw];
 
 function ensureBaseWorkbenchMenus(routes: any) {

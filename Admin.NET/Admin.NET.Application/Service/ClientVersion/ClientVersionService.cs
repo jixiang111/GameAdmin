@@ -197,6 +197,7 @@ public class ClientVersionService : IDynamicApiController, ITransient
     public async Task<ClientWhitelistOutput> SaveWhitelist(ClientWhitelistUpsertInput input)
     {
         var machineCode = NormalizeMachineCode(input.MachineCode);
+        var machineCodeUpper = machineCode.ToUpperInvariant();
         var tagsJson = SerializeTags(input.Tags);
         var now = DateTime.Now;
 
@@ -208,7 +209,8 @@ public class ClientVersionService : IDynamicApiController, ITransient
 
             if (!machineCode.Equals(entity.MachineCode, StringComparison.OrdinalIgnoreCase))
             {
-                var exists = await _whitelistRep.IsAnyAsync(u => u.MachineCode == machineCode && u.Id != entity.Id);
+                var exists = await _whitelistRep.IsAnyAsync(u =>
+                    SqlFunc.ToUpper(u.MachineCode) == machineCodeUpper && u.Id != entity.Id);
                 if (exists) throw Oops.Oh("机器码已存在，无法重复添加");
             }
 
@@ -221,10 +223,16 @@ public class ClientVersionService : IDynamicApiController, ITransient
             entity.UpdateUserName = _userManager.RealName ?? _userManager.Account;
 
             await _whitelistRep.UpdateAsync(entity);
+
+            // 若被禁用，则需要从所有渠道规则中移除并同步 CenterServer
+            if (!entity.Enabled)
+            {
+                await RemoveWhitelistFromLinkedRulesAsync(entity.Id);
+            }
         }
         else
         {
-            var exists = await _whitelistRep.IsAnyAsync(u => u.MachineCode == machineCode);
+            var exists = await _whitelistRep.IsAnyAsync(u => SqlFunc.ToUpper(u.MachineCode) == machineCodeUpper);
             if (exists) throw Oops.Oh("机器码已存在，无法重复添加");
 
             entity = new ClientVersionWhitelist
@@ -254,7 +262,7 @@ public class ClientVersionService : IDynamicApiController, ITransient
         var entry = await _whitelistRep.GetFirstAsync(u => u.Id == input.EntryId)
             ?? throw Oops.Oh("白名单不存在或已删除");
 
-        await _ruleWhitelistRep.DeleteAsync(u => u.WhitelistEntryId == entry.Id);
+        await RemoveWhitelistFromLinkedRulesAsync(entry.Id);
         await _whitelistRep.DeleteAsync(entry);
     }
 
@@ -299,11 +307,36 @@ public class ClientVersionService : IDynamicApiController, ITransient
         var platform = input.Platform;
         var now = DateTime.Now;
 
+        var isNew = !input.RuleId.HasValue;
+        string? oldChannelId = null;
+        string? oldChannelName = null;
+        string? oldBucket = null;
+        string? oldRoot = null;
+        string? oldResourceDomain = null;
+        string? oldGeneralJson = null;
+        string? oldWhitelistJson = null;
+        List<string> oldWhitelistCodes = new();
+
         ClientVersionRule entity;
         if (input.RuleId.HasValue)
         {
             entity = await _ruleRep.GetFirstAsync(u => u.Id == input.RuleId.Value)
                 ?? throw Oops.Oh("规则不存在或已删除");
+
+            oldChannelId = entity.ChannelId;
+            oldChannelName = entity.ChannelName;
+            oldBucket = entity.BucketName;
+            oldRoot = entity.RootPath;
+            oldResourceDomain = entity.ResourceDomain;
+            oldGeneralJson = entity.GeneralVersionInfoJson;
+            oldWhitelistJson = entity.WhitelistVersionInfoJson;
+
+            var oldOutputs = await BuildRuleOutputsAsync(new[] { entity });
+            var oldOutput = oldOutputs.FirstOrDefault();
+            if (oldOutput != null)
+            {
+                oldWhitelistCodes = oldOutput.WhitelistMachineCodes ?? new List<string>();
+            }
         }
         else
         {
@@ -358,8 +391,23 @@ public class ClientVersionService : IDynamicApiController, ITransient
         var output = await BuildRuleOutputsAsync(new[] { entity });
         var result = output.First();
 
-        // 同步到 CenterServer
-        await SyncVersionRuleToCenterAsync(entity, result.WhitelistMachineCodes);
+        // 同步到 CenterServer（仅在有变化或新建时）
+        var needSync = isNew || RuleChanged(
+            oldChannelId,
+            oldChannelName,
+            oldBucket,
+            oldRoot,
+            oldResourceDomain,
+            oldGeneralJson,
+            oldWhitelistJson,
+            oldWhitelistCodes,
+            entity,
+            result.WhitelistMachineCodes);
+
+        if (needSync)
+        {
+            await SyncVersionRuleToCenterAsync(entity, result.WhitelistMachineCodes);
+        }
 
         return result;
     }
@@ -416,6 +464,7 @@ public class ClientVersionService : IDynamicApiController, ITransient
             ?? throw Oops.Oh("尚未配置白名单版本，无法发布");
 
         var generalInfo = DeserializeVersionInfo(rule.GeneralVersionInfoJson);
+        var previousGeneralJson = rule.GeneralVersionInfoJson;
         var ossConfig = await GetActiveOssConfigAsync();
         var client = CreateOssClient(ossConfig);
         var normalizedRoot = NormalizeStoredRoot(rule.RootPath);
@@ -434,8 +483,8 @@ public class ClientVersionService : IDynamicApiController, ITransient
         }
 
         var previousTimestamp = generalInfo?.ResVersionTimestamp ?? 0;
-        if (publishInfo.ResVersionTimestamp.HasValue && publishInfo.ResVersionTimestamp.Value <= previousTimestamp)
-            throw Oops.Oh("资源版本必须大于当前线上版本");
+        if (publishInfo.ResVersionTimestamp.HasValue && publishInfo.ResVersionTimestamp.Value < previousTimestamp)
+            throw Oops.Oh("资源版本不得早于当前线上版本");
 
         rule.GeneralVersionInfoJson = SerializeVersionInfo(publishInfo);
         rule.LatestPublishResVersion = publishInfo.ResVersion;
@@ -451,8 +500,11 @@ public class ClientVersionService : IDynamicApiController, ITransient
         var output = await BuildRuleOutputsAsync(new[] { rule });
         var result = output.First();
 
-        // 发布后同步到 CenterServer
-        await SyncVersionRuleToCenterAsync(rule, result.WhitelistMachineCodes);
+        // 发布后同步到 CenterServer（仅当版本实际变更）
+        if (!string.Equals(previousGeneralJson, rule.GeneralVersionInfoJson, StringComparison.Ordinal))
+        {
+            await SyncVersionRuleToCenterAsync(rule, result.WhitelistMachineCodes);
+        }
 
         return result;
     }
@@ -532,12 +584,12 @@ public class ClientVersionService : IDynamicApiController, ITransient
         if (string.IsNullOrWhiteSpace(machineCode))
             throw Oops.Oh("机器码不能为空");
 
-        var normalized = machineCode.Trim().Replace(" ", "").ToUpperInvariant();
+        var normalized = machineCode.Trim().Replace(" ", "");
         if (normalized.Length < 16 || normalized.Length > 128)
             throw Oops.Oh("机器码长度需在 16~128 之间");
 
-        if (!Regex.IsMatch(normalized, "^[A-Z0-9\\-]+$"))
-            throw Oops.Oh("机器码仅允许字母、数字、-");
+        if (!Regex.IsMatch(normalized, "^[A-Za-z0-9\\-_]+$"))
+            throw Oops.Oh("机器码仅允许字母、数字、-、_");
 
         return normalized;
     }
@@ -547,6 +599,67 @@ public class ClientVersionService : IDynamicApiController, ITransient
         if (tags == null) return null;
         var filtered = tags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList();
         return filtered.Count == 0 ? null : JsonSerializer.Serialize(filtered, JsonOptions);
+    }
+
+    private static bool RuleChanged(
+        string? oldChannelId,
+        string? oldChannelName,
+        string? oldBucket,
+        string? oldRoot,
+        string? oldResourceDomain,
+        string? oldGeneralJson,
+        string? oldWhitelistJson,
+        List<string> oldWhitelistCodes,
+        ClientVersionRule newRule,
+        List<string>? newWhitelistCodes)
+    {
+        if (oldChannelId == null) return true; // 新建
+
+        if (!string.Equals(oldChannelId, newRule.ChannelId, StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.Equals(oldChannelName, newRule.ChannelName, StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.Equals(oldBucket, newRule.BucketName, StringComparison.Ordinal)) return true;
+        if (!string.Equals(oldRoot, newRule.RootPath, StringComparison.Ordinal)) return true;
+        if (!string.Equals(oldResourceDomain, newRule.ResourceDomain, StringComparison.Ordinal)) return true;
+        if (!string.Equals(oldGeneralJson ?? string.Empty, newRule.GeneralVersionInfoJson ?? string.Empty, StringComparison.Ordinal)) return true;
+        if (!string.Equals(oldWhitelistJson ?? string.Empty, newRule.WhitelistVersionInfoJson ?? string.Empty, StringComparison.Ordinal)) return true;
+
+        var newCodes = newWhitelistCodes ?? new List<string>();
+        if (oldWhitelistCodes.Count != newCodes.Count) return true;
+
+        var oldSet = new HashSet<string>(oldWhitelistCodes, StringComparer.OrdinalIgnoreCase);
+       var newSet = new HashSet<string>(newCodes, StringComparer.OrdinalIgnoreCase);
+        return oldSet.Count != newSet.Count || oldSet.Except(newSet).Any();
+    }
+
+    /// <summary>
+    /// 将指定白名单从所有关联规则中移除并同步 CenterServer
+    /// </summary>
+    private async Task RemoveWhitelistFromLinkedRulesAsync(long whitelistEntryId)
+    {
+        var affectedRuleIds = await _ruleWhitelistRep.AsQueryable()
+            .Where(u => u.WhitelistEntryId == whitelistEntryId)
+            .Select(u => u.RuleId)
+            .Distinct()
+            .ToListAsync();
+
+        await _ruleWhitelistRep.DeleteAsync(u => u.WhitelistEntryId == whitelistEntryId);
+
+        if (affectedRuleIds.Count == 0) return;
+
+        var affectedRules = await _ruleRep.AsQueryable()
+            .Where(r => affectedRuleIds.Contains(r.Id))
+            .ToListAsync();
+
+        if (affectedRules.Count == 0) return;
+
+        var outputs = await BuildRuleOutputsAsync(affectedRules);
+        var codeDict = outputs.ToDictionary(o => o.RuleId, o => o.WhitelistMachineCodes ?? new List<string>());
+
+        foreach (var rule in affectedRules)
+        {
+            var codes = codeDict.TryGetValue(rule.Id, out var list) ? list : new List<string>();
+            await SyncVersionRuleToCenterAsync(rule, codes);
+        }
     }
 
     private static List<string>? DeserializeTags(string? tagsJson)
