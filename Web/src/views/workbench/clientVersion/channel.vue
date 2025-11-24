@@ -170,14 +170,26 @@
 				<el-divider content-position="left">正式版本</el-divider>
 
 				<el-form-item label="App 版本" prop="generalVersionInfo.appVersion">
-					<el-select v-model="generalAppVersion" placeholder="请选择" :loading="appVersionsLoading" @change="onGeneralAppVersionChange">
+					<el-select
+						v-model="generalAppVersion"
+						placeholder="请选择"
+						:loading="appVersionsLoading"
+						:disabled="isEditing"
+						@change="onGeneralAppVersionChange"
+					>
 						<el-option v-for="item in appVersions" :key="item.appVersion" :label="item.appVersion" :value="item.appVersion" />
 					</el-select>
-					<el-button type="primary" link icon="ele-Refresh" @click="loadAppVersions">刷新</el-button>
+					<el-button type="primary" link icon="ele-Refresh" :disabled="isEditing" @click="loadAppVersions">刷新</el-button>
+					<el-text v-if="isEditing" class="form-tip">编辑模式下正式版由发布流程生成，无法手动修改</el-text>
 				</el-form-item>
 
 				<el-form-item label="资源版本" prop="generalVersionInfo.resVersion">
-					<el-select v-model="generalResVersion" placeholder="请先选择 App 版本" :loading="generalResVersionsLoading" :disabled="!generalAppVersion">
+					<el-select
+						v-model="generalResVersion"
+						placeholder="请先选择 App 版本"
+						:loading="generalResVersionsLoading"
+						:disabled="!generalAppVersion || isEditing"
+					>
 						<el-option v-for="item in generalResVersions" :key="item.fileName" :label="formatResVersionLabel(item)" :value="item.fileName">
 							<div style="display: flex; justify-content: space-between">
 								<span>{{ item.fileName }}</span>
@@ -188,19 +200,19 @@
 				</el-form-item>
 
 				<el-form-item label="强制更新">
-					<el-switch v-model="generalForceUpdate" />
+					<el-switch v-model="generalForceUpdate" :disabled="isEditing" />
 				</el-form-item>
 
 				<el-form-item label="更新地址">
-					<el-input v-model="generalUpdateUrl" placeholder="可选，客户端更新下载地址" />
+					<el-input v-model="generalUpdateUrl" placeholder="可选，客户端更新下载地址" :disabled="isEditing" />
 				</el-form-item>
 
 				<el-form-item label="登录地址">
-					<el-input v-model="generalLoginUrl" placeholder="可选，登录服务器地址" />
+					<el-input v-model="generalLoginUrl" placeholder="可选，登录服务器地址" :disabled="isEditing" />
 				</el-form-item>
 
 				<el-form-item label="更新公告">
-					<el-input v-model="generalUpdateNotice" type="textarea" :rows="2" placeholder="可选，更新内容说明" />
+					<el-input v-model="generalUpdateNotice" type="textarea" :rows="2" placeholder="可选，更新内容说明" :disabled="isEditing" />
 				</el-form-item>
 			</el-form>
 
@@ -297,6 +309,8 @@ const drawer = reactive({
 		whitelistTesterEntryIds: [] as string[],
 	} as ClientVersionRuleSaveInput,
 });
+
+const isEditing = computed(() => !!drawer.form.ruleId);
 
 const drawerRules: FormRules<ClientVersionRuleSaveInput> = {
 	channelId: [{ required: true, message: '请输入渠道ID', trigger: 'blur' }],
