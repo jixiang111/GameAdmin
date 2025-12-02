@@ -1138,7 +1138,7 @@ public class ClientVersionService : IDynamicApiController, ITransient
                     VersionInfo = new AppVersionInfo
                     {
                         AppVersion = generalInfo.AppVersion ?? string.Empty,
-                        ResVersion = generalInfo.ResVersion ?? string.Empty,
+                        ResVersion = NormalizeResVersionForServer(generalInfo.ResVersion),
                         UpdateUrl = generalInfo.UpdateUrl ?? string.Empty,
                         ChannelName = rule.ChannelName,
                         UpdateNotice = generalInfo.UpdateNotice ?? string.Empty,
@@ -1163,7 +1163,7 @@ public class ClientVersionService : IDynamicApiController, ITransient
                     VersionInfo = new AppVersionInfo
                     {
                         AppVersion = whitelistInfo.AppVersion ?? string.Empty,
-                        ResVersion = whitelistInfo.ResVersion ?? string.Empty,
+                        ResVersion = NormalizeResVersionForServer(whitelistInfo.ResVersion),
                         UpdateUrl = whitelistInfo.UpdateUrl ?? string.Empty,
                         ChannelName = rule.ChannelName,
                         UpdateNotice = whitelistInfo.UpdateNotice ?? string.Empty,
@@ -1209,6 +1209,19 @@ public class ClientVersionService : IDynamicApiController, ITransient
             ClientPlatform.Mini => "Mini",
             _ => "Android"
         };
+    }
+
+    private static string NormalizeResVersionForServer(string? resVersion)
+    {
+        if (string.IsNullOrWhiteSpace(resVersion)) return string.Empty;
+
+        var match = ResVersionRegex.Match(resVersion.Trim());
+        if (match.Success && match.Groups.Count > 1)
+        {
+            return match.Groups[1].Value;
+        }
+
+        return resVersion.Trim();
     }
 
     #endregion

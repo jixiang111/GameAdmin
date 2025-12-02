@@ -14320,5 +14320,138 @@
 		"zh-tw": "",
 		"en": "",
 		"it": ""
+	},
+	"lpkhnn5": {
+		"zh-cn": "创建时间:",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"ino1": {
+		"zh-cn": "年",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"lpj3b75": {
+		"zh-cn": "创建时间：",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"ceinad": {
+		"zh-cn": "请先填写渠道ID并选择平台",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"e1exsxz": {
+		"zh-cn": "未找到任何 AppVersion，请确认 OSS 目录中存在版本文件夹",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"tupxre1z": {
+		"zh-cn": "确定将白名单版本发布为正式版本吗？\n\t\t\t<br/><br/>\n\t\t\t<strong>白名单版本：</strong><br/>\n\t\t\tApp：",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"77hhpwc": {
+		"zh-cn": "<br/>\n\t\t\t资源：",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"sa7ey41b": {
+		"zh-cn": "<br/><br/>\n\t\t\t<strong>当前正式版本：</strong><br/>\n\t\t\t",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"qplq438": {
+		"zh-cn": "<br/>资源：",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"mzt8mno": {
+		"zh-cn": "渠道唯一标识，如 official、taptap",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"ixhhola": {
+		"zh-cn": "小程序(WebGL)",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"wvlrx5o": {
+		"zh-cn": "选择后不可修改，每个渠道+平台仅允许存在一条规则",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"7bu9b3m": {
+		"zh-cn": "留空则使用全局 OSS 配置的 Bucket",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"icrukad": {
+		"zh-cn": "可选，自定义 CDN 域名",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"ua8qk6a": {
+		"zh-cn": "可选，客户端下载地址",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"hbyz2": {
+		"zh-cn": "日 ",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"6k36oz6": {
+		"zh-cn": " 创建时间：",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"ekfggh8": {
+		"zh-cn": " 资源创建时间：",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
+	},
+	"fmx06p7": {
+		"zh-cn": "资源创建时间：",
+		"zh-hk": "",
+		"zh-tw": "",
+		"en": "",
+		"it": ""
 	}
 }

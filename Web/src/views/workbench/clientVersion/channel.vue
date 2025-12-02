@@ -32,23 +32,29 @@
 						<el-tag :type="getPlatformTagType(scope.row.platform)" size="small">{{ getPlatformName(scope.row.platform) }}</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column label="白名单测试版本" min-width="180">
+				<el-table-column label="白名单测试版本" min-width="220">
 					<template #default="scope">
 						<div v-if="scope.row.whitelistVersionInfo">
 							<div><strong>App:</strong> {{ scope.row.whitelistVersionInfo.appVersion }}</div>
 							<div><strong>资源:</strong> {{ scope.row.whitelistVersionInfo.resVersion }}</div>
-							<div v-if="scope.row.whitelistMachineCodes && scope.row.whitelistMachineCodes.length > 0">
+							<div class="text-secondary">
+								资源创建时间：{{ formatVersionInfoTime(scope.row.whitelistVersionInfo) || '未知' }}
+							</div>
+							<div v-if="scope.row.whitelistMachineCodes && scope.row.whitelistMachineCodes.length">
 								<el-tag size="small" type="info">{{ scope.row.whitelistMachineCodes.length }}个测试用户</el-tag>
 							</div>
 						</div>
 						<span v-else class="text-secondary">未配置</span>
 					</template>
 				</el-table-column>
-				<el-table-column label="正式版本" min-width="180">
+				<el-table-column label="正式版本" min-width="220">
 					<template #default="scope">
 						<div v-if="scope.row.generalVersionInfo">
 							<div><strong>App:</strong> {{ scope.row.generalVersionInfo.appVersion }}</div>
 							<div><strong>资源:</strong> {{ scope.row.generalVersionInfo.resVersion }}</div>
+							<div class="text-secondary">
+								资源创建时间：{{ formatVersionInfoTime(scope.row.generalVersionInfo) || '未知' }}
+							</div>
 						</div>
 						<span v-else class="text-secondary">未配置</span>
 					</template>
@@ -85,7 +91,6 @@
 			</el-table>
 		</el-card>
 
-		<!-- 编辑抽屉 -->
 		<el-drawer v-model="drawer.visible" :title="drawer.title" size="800px" @closed="resetDrawer">
 			<el-form ref="drawerFormRef" :model="drawer.form" :rules="drawerRules" label-width="140px" class="drawer-form">
 				<el-divider content-position="left">基础配置</el-divider>
@@ -93,7 +98,7 @@
 				<el-form-item label="渠道ID" prop="channelId">
 					<el-input
 						v-model="drawer.form.channelId"
-						placeholder="渠道唯一标识，如 official, taptap"
+						placeholder="渠道唯一标识，如 official、taptap"
 						:disabled="!!drawer.form.ruleId"
 						@blur="syncChannelName"
 					/>
@@ -107,13 +112,13 @@
 					<el-select v-model="drawer.form.platform" placeholder="请选择平台" :disabled="!!drawer.form.ruleId" @change="onPlatformChange">
 						<el-option label="Android" :value="ClientPlatform.Android" />
 						<el-option label="iOS" :value="ClientPlatform.Ios" />
-						<el-option label="小程序 (WebGL)" :value="ClientPlatform.Mini" />
+						<el-option label="小程序(WebGL)" :value="ClientPlatform.Mini" />
 					</el-select>
-					<el-text class="form-tip">选择后不可修改，每个渠道+平台仅能有一条规则</el-text>
+					<el-text class="form-tip">选择后不可修改，每个渠道+平台仅允许存在一条规则</el-text>
 				</el-form-item>
 
 				<el-form-item label="OSS Bucket">
-					<el-input v-model="drawer.form.bucketName" placeholder="留空使用全局 OSS 配置的 Bucket" clearable />
+					<el-input v-model="drawer.form.bucketName" placeholder="留空则使用全局 OSS 配置的 Bucket" clearable />
 				</el-form-item>
 
 				<el-form-item label="根路径 (RootPath)">
@@ -121,7 +126,7 @@
 				</el-form-item>
 
 				<el-form-item label="自定义资源域名">
-					<el-input v-model="drawer.form.resourceDomain" placeholder="可选，自定义CDN域名" clearable />
+					<el-input v-model="drawer.form.resourceDomain" placeholder="可选，自定义 CDN 域名" clearable />
 				</el-form-item>
 
 				<el-divider content-position="left">白名单测试版本</el-divider>
@@ -134,11 +139,25 @@
 				</el-form-item>
 
 				<el-form-item label="资源版本" prop="whitelistVersionInfo.resVersion">
-					<el-select v-model="whitelistResVersion" placeholder="请先选择 App 版本" :loading="whitelistResVersionsLoading" :disabled="!whitelistAppVersion">
-						<el-option v-for="item in whitelistResVersions" :key="item.fileName" :label="formatResVersionLabel(item)" :value="item.fileName">
-							<div style="display: flex; justify-content: space-between">
-								<span>{{ item.fileName }}</span>
-								<el-tag v-if="item.isNewerThanOnline" type="success" size="small">新版本</el-tag>
+					<el-select
+						v-model="whitelistResVersion"
+						placeholder="请先选择 App 版本"
+						:loading="whitelistResVersionsLoading"
+						:disabled="!whitelistAppVersion"
+					>
+						<el-option
+							v-for="item in whitelistResVersions"
+							:key="item.fileName"
+							class-name="res-option-item"
+							:label="formatResVersionLabel(item)"
+							:value="item.fileName"
+						>
+							<div class="res-option">
+								<div class="res-option-header">
+									<span class="res-option-name">{{ item.fileName }}</span>
+									<el-tag v-if="item.isNewerThanOnline" type="success" size="small">新版本</el-tag>
+								</div>
+								<div class="option-meta">资源创建时间：{{ formatResVersionTime(item) || '未知' }}</div>
 							</div>
 						</el-option>
 					</el-select>
@@ -149,7 +168,7 @@
 				</el-form-item>
 
 				<el-form-item label="更新地址">
-					<el-input v-model="whitelistUpdateUrl" placeholder="可选，客户端更新下载地址" />
+					<el-input v-model="whitelistUpdateUrl" placeholder="可选，客户端下载地址" />
 				</el-form-item>
 
 				<el-form-item label="登录地址">
@@ -161,8 +180,19 @@
 				</el-form-item>
 
 				<el-form-item label="白名单测试用户" prop="whitelistTesterEntryIds">
-					<el-select v-model="drawer.form.whitelistTesterEntryIds" multiple filterable placeholder="从白名单列表中选择测试用户" style="width: 100%">
-						<el-option v-for="item in whitelistOptions" :key="item.entryId" :label="`${item.machineCode} (${item.remark || '无备注'})`" :value="item.entryId" />
+					<el-select
+						v-model="drawer.form.whitelistTesterEntryIds"
+						multiple
+						filterable
+						placeholder="从白名单列表中选择测试用户"
+						style="width: 100%"
+					>
+						<el-option
+							v-for="item in whitelistOptions"
+							:key="item.entryId"
+							:label="`${item.machineCode} (${item.remark || '无备注'})`"
+							:value="item.entryId"
+						/>
 					</el-select>
 					<el-button type="primary" link icon="ele-Refresh" @click="loadWhitelistOptions">刷新白名单</el-button>
 				</el-form-item>
@@ -190,29 +220,38 @@
 						:loading="generalResVersionsLoading"
 						:disabled="!generalAppVersion || isEditing"
 					>
-						<el-option v-for="item in generalResVersions" :key="item.fileName" :label="formatResVersionLabel(item)" :value="item.fileName">
-							<div style="display: flex; justify-content: space-between">
-								<span>{{ item.fileName }}</span>
-								<el-tag v-if="item.isNewerThanOnline" type="success" size="small">新版本</el-tag>
+						<el-option
+							v-for="item in generalResVersions"
+							:key="item.fileName"
+							class-name="res-option-item"
+							:label="formatResVersionLabel(item)"
+							:value="item.fileName"
+						>
+							<div class="res-option">
+								<div class="res-option-header">
+									<span class="res-option-name">{{ item.fileName }}</span>
+									<el-tag v-if="item.isNewerThanOnline" type="success" size="small">新版本</el-tag>
+								</div>
+								<div class="option-meta">资源创建时间：{{ formatResVersionTime(item) || '未知' }}</div>
 							</div>
 						</el-option>
 					</el-select>
 				</el-form-item>
 
 				<el-form-item label="强制更新">
-					<el-switch v-model="generalForceUpdate" :disabled="isEditing" />
+					<el-switch v-model="generalForceUpdate" />
 				</el-form-item>
 
 				<el-form-item label="更新地址">
-					<el-input v-model="generalUpdateUrl" placeholder="可选，客户端更新下载地址" :disabled="isEditing" />
+					<el-input v-model="generalUpdateUrl" placeholder="可选，客户端下载地址" />
 				</el-form-item>
 
 				<el-form-item label="登录地址">
-					<el-input v-model="generalLoginUrl" placeholder="可选，登录服务器地址" :disabled="isEditing" />
+					<el-input v-model="generalLoginUrl" placeholder="可选，登录服务器地址" />
 				</el-form-item>
 
 				<el-form-item label="更新公告">
-					<el-input v-model="generalUpdateNotice" type="textarea" :rows="2" placeholder="可选，更新内容说明" :disabled="isEditing" />
+					<el-input v-model="generalUpdateNotice" type="textarea" :rows="2" placeholder="可选，更新内容说明" />
 				</el-form-item>
 			</el-form>
 
@@ -225,7 +264,7 @@
 </template>
 
 <script setup lang="ts" name="clientChannelVersion">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
@@ -245,7 +284,9 @@ import {
 	ClientPlatform,
 } from '/@/api/clientVersion';
 
-// ==================== 查询表格 ====================
+interface DrawerForm extends ClientVersionRuleSaveInput {
+	whitelistTesterEntryIds: Array<number | string>;
+}
 
 const query = reactive({
 	channelId: '',
@@ -259,7 +300,7 @@ const handleQuery = async () => {
 	loading.value = true;
 	try {
 		const res: any = await getRuleList(query);
-		tableData.value = res.data?.result ?? res.data?.data ?? res.data ?? [];
+		tableData.value = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
 	} catch (error: any) {
 		ElMessage.error(error?.response?.data?.message || error?.message || '查询失败');
 	} finally {
@@ -291,23 +332,21 @@ const getPlatformTagType = (platform: ClientPlatform): string => {
 	return map[platform] || 'info';
 };
 
-// ==================== 抽屉表单 ====================
-
 const drawerFormRef = ref<FormInstance>();
 const drawer = reactive({
 	visible: false,
 	title: '新增版本规则',
 	saving: false,
 	form: {
-		ruleId: undefined as string | undefined,
+		ruleId: undefined,
 		channelId: '',
 		channelName: '',
-		platform: undefined as ClientPlatform | undefined,
+		platform: undefined,
 		bucketName: '',
 		rootPath: '/',
 		resourceDomain: '',
-		whitelistTesterEntryIds: [] as string[],
-	} as ClientVersionRuleSaveInput,
+		whitelistTesterEntryIds: [],
+	} as DrawerForm,
 });
 
 const isEditing = computed(() => !!drawer.form.ruleId);
@@ -318,7 +357,6 @@ const drawerRules: FormRules<ClientVersionRuleSaveInput> = {
 	platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
 };
 
-// 白名单版本信息
 const whitelistAppVersion = ref('');
 const whitelistResVersion = ref('');
 const whitelistForceUpdate = ref(false);
@@ -326,7 +364,6 @@ const whitelistUpdateUrl = ref('');
 const whitelistLoginUrl = ref('');
 const whitelistUpdateNotice = ref('');
 
-// 正式版本信息
 const generalAppVersion = ref('');
 const generalResVersion = ref('');
 const generalForceUpdate = ref(false);
@@ -334,19 +371,12 @@ const generalUpdateUrl = ref('');
 const generalLoginUrl = ref('');
 const generalUpdateNotice = ref('');
 
-// AppVersion 列表
 const appVersions = ref<ChannelAppVersionItem[]>([]);
 const appVersionsLoading = ref(false);
-
-// 白名单资源版本列表
 const whitelistResVersions = ref<ChannelResVersionItem[]>([]);
 const whitelistResVersionsLoading = ref(false);
-
-// 正式版资源版本列表
 const generalResVersions = ref<ChannelResVersionItem[]>([]);
 const generalResVersionsLoading = ref(false);
-
-// 白名单选项
 const whitelistOptions = ref<ClientWhitelistOutput[]>([]);
 
 const syncChannelName = () => {
@@ -356,7 +386,6 @@ const syncChannelName = () => {
 };
 
 const onPlatformChange = () => {
-	// 清空版本选择
 	whitelistAppVersion.value = '';
 	whitelistResVersion.value = '';
 	generalAppVersion.value = '';
@@ -365,7 +394,6 @@ const onPlatformChange = () => {
 	whitelistResVersions.value = [];
 	generalResVersions.value = [];
 
-	// 加载 AppVersion 列表
 	if (drawer.form.channelId && drawer.form.platform) {
 		loadAppVersions();
 	}
@@ -373,7 +401,7 @@ const onPlatformChange = () => {
 
 const loadAppVersions = async () => {
 	if (!drawer.form.channelId || !drawer.form.platform) {
-		ElMessage.warning('请先填写渠道ID和选择平台');
+		ElMessage.warning('请先填写渠道ID并选择平台');
 		return;
 	}
 
@@ -385,10 +413,10 @@ const loadAppVersions = async () => {
 			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
-		appVersions.value = res.data?.result ?? res.data?.data ?? res.data ?? [];
+		appVersions.value = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
 
 		if (appVersions.value.length === 0) {
-			ElMessage.warning('未找到任何 AppVersion，请确认 OSS 目录下存在版本文件夹');
+			ElMessage.warning('未找到任何 AppVersion，请确认 OSS 目录中存在版本文件夹');
 		}
 	} catch (error: any) {
 		ElMessage.error(error?.response?.data?.message || error?.message || '加载 AppVersion 失败');
@@ -397,8 +425,13 @@ const loadAppVersions = async () => {
 	}
 };
 
-const onWhitelistAppVersionChange = async () => {
-	whitelistResVersion.value = '';
+const onWhitelistAppVersionChange = async (arg?: boolean | { preserveSelection?: boolean }) => {
+	const preserveSelection =
+		typeof arg === 'boolean' ? arg : typeof arg === 'object' && arg ? !!arg.preserveSelection : false;
+	const previous = whitelistResVersion.value;
+	if (!preserveSelection) {
+		whitelistResVersion.value = '';
+	}
 	whitelistResVersions.value = [];
 
 	if (!whitelistAppVersion.value) return;
@@ -412,10 +445,26 @@ const onWhitelistAppVersionChange = async () => {
 			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
-		whitelistResVersions.value = res.data?.result ?? res.data?.data ?? res.data ?? [];
+		const list = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
+		whitelistResVersions.value = list;
 
-		if (whitelistResVersions.value.length > 0) {
-			// 默认选择第一个（最新的）
+		if (preserveSelection && previous) {
+			const exists = list.some((item: ChannelResVersionItem) => item.fileName === previous);
+			if (!exists) {
+				whitelistResVersions.value = [
+					{
+						fileName: previous,
+						timestamp: undefined,
+						fileSize: undefined,
+						lastModified: undefined,
+						isNewerThanOnline: false,
+						downloadUrl: '',
+					},
+					...whitelistResVersions.value,
+				];
+			}
+			whitelistResVersion.value = previous;
+		} else if (!whitelistResVersion.value && whitelistResVersions.value.length > 0) {
 			whitelistResVersion.value = whitelistResVersions.value[0].fileName;
 		}
 	} catch (error: any) {
@@ -425,8 +474,13 @@ const onWhitelistAppVersionChange = async () => {
 	}
 };
 
-const onGeneralAppVersionChange = async () => {
-	generalResVersion.value = '';
+const onGeneralAppVersionChange = async (arg?: boolean | { preserveSelection?: boolean }) => {
+	const preserveSelection =
+		typeof arg === 'boolean' ? arg : typeof arg === 'object' && arg ? !!arg.preserveSelection : false;
+	const previous = generalResVersion.value;
+	if (!preserveSelection) {
+		generalResVersion.value = '';
+	}
 	generalResVersions.value = [];
 
 	if (!generalAppVersion.value) return;
@@ -440,10 +494,26 @@ const onGeneralAppVersionChange = async () => {
 			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
-		generalResVersions.value = res.data?.result ?? res.data?.data ?? res.data ?? [];
+		const list = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
+		generalResVersions.value = list;
 
-		if (generalResVersions.value.length > 0) {
-			// 默认选择第一个（最新的）
+		if (preserveSelection && previous) {
+			const exists = list.some((item: ChannelResVersionItem) => item.fileName === previous);
+			if (!exists) {
+				generalResVersions.value = [
+					{
+						fileName: previous,
+						timestamp: undefined,
+						fileSize: undefined,
+						lastModified: undefined,
+						isNewerThanOnline: false,
+						downloadUrl: '',
+					},
+					...generalResVersions.value,
+				];
+			}
+			generalResVersion.value = previous;
+		} else if (!generalResVersion.value && generalResVersions.value.length > 0) {
 			generalResVersion.value = generalResVersions.value[0].fileName;
 		}
 	} catch (error: any) {
@@ -456,7 +526,7 @@ const onGeneralAppVersionChange = async () => {
 const loadWhitelistOptions = async () => {
 	try {
 		const res: any = await getWhitelistList({ onlyEnabled: true });
-		whitelistOptions.value = res.data?.result ?? res.data?.data ?? res.data ?? [];
+		whitelistOptions.value = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
 	} catch (error: any) {
 		ElMessage.error(error?.response?.data?.message || error?.message || '加载白名单失败');
 	}
@@ -464,8 +534,86 @@ const loadWhitelistOptions = async () => {
 
 const formatResVersionLabel = (item: ChannelResVersionItem): string => {
 	const size = item.fileSize ? `${(item.fileSize / 1024).toFixed(2)} KB` : '';
-	const time = item.timestamp ? new Date(item.timestamp).toLocaleString() : '';
-	return `${item.fileName} ${size ? `[${size}]` : ''} ${time ? `[${time}]` : ''}`;
+	const time = formatResVersionTime(item) || '未知';
+	const result: string[] = [item.fileName];
+	if (size) result.push(`[${size}]`);
+	result.push(`资源创建时间：${time}`);
+	return result.join(' ');
+};
+
+const formatResVersionTime = (item: ChannelResVersionItem): string => {
+	if (item.lastModified) {
+		const date = new Date(item.lastModified);
+		if (!isNaN(date.getTime())) return formatDateTime(date);
+	}
+
+	if (item.timestamp) {
+		const ts = item.timestamp;
+		const date = new Date(ts > 1e12 ? ts : ts * 1000);
+		if (!isNaN(date.getTime())) return formatDateTime(date);
+	}
+
+	const fromName = extractTimestamp(item.fileName);
+	if (fromName) {
+		const date = new Date(fromName.length === 14 ? parseYyyyMMddHHmmss(fromName) : Number(fromName));
+		if (!isNaN(date.getTime())) return formatDateTime(date);
+	}
+
+	return '';
+};
+
+const extractTimestamp = (fileName: string): string | null => {
+	const name = fileName.split('/').pop() || fileName;
+
+	const specific = /versions_(\d{8,})/i.exec(name);
+	if (specific) return specific[1];
+
+	const underscore = /_(\d{10,14})(?=\.[^.]+$)/.exec(name);
+	if (underscore) return underscore[1];
+
+	const trailingDigits = /(\d{10,14})(?=\.[^.]+$)/.exec(name);
+	if (trailingDigits) return trailingDigits[1];
+
+	return null;
+};
+
+const formatVersionInfoTime = (info?: ClientAppVersionInfoDto): string => {
+	if (!info) return '';
+
+	if (info.resVersionTimestamp) {
+		const ts = info.resVersionTimestamp;
+		const date = new Date(ts > 1e12 ? ts : ts * 1000);
+		if (!isNaN(date.getTime())) return formatDateTime(date);
+	}
+
+	if (info.resVersion) {
+		const fromName = extractTimestamp(info.resVersion);
+		if (fromName) {
+			const date = new Date(fromName.length === 14 ? parseYyyyMMddHHmmss(fromName) : Number(fromName));
+			if (!isNaN(date.getTime())) return formatDateTime(date);
+		}
+	}
+
+	return '';
+};
+
+const parseYyyyMMddHHmmss = (value: string): number => {
+	const y = Number(value.slice(0, 4));
+	const m = Number(value.slice(4, 6)) - 1;
+	const d = Number(value.slice(6, 8));
+	const hh = Number(value.slice(8, 10));
+	const mm = Number(value.slice(10, 12));
+	const ss = Number(value.slice(12, 14));
+	return new Date(y, m, d, hh, mm, ss).getTime();
+};
+
+const formatDateTime = (date: Date): string => {
+	const pad = (num: number) => num.toString().padStart(2, '0');
+	const month = date.getMonth() + 1;
+	const day = date.getDate();
+	return `${date.getFullYear()}年${month}月${day}日 ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+		date.getSeconds()
+	)}`;
 };
 
 const openDrawer = async (row?: ClientVersionRuleOutput) => {
@@ -482,7 +630,6 @@ const openDrawer = async (row?: ClientVersionRuleOutput) => {
 		drawer.form.resourceDomain = row.resourceDomain || '';
 		drawer.form.whitelistTesterEntryIds = row.whitelistTesterEntryIds || [];
 
-		// 白名单版本信息
 		if (row.whitelistVersionInfo) {
 			whitelistAppVersion.value = row.whitelistVersionInfo.appVersion;
 			whitelistResVersion.value = row.whitelistVersionInfo.resVersion;
@@ -492,7 +639,6 @@ const openDrawer = async (row?: ClientVersionRuleOutput) => {
 			whitelistUpdateNotice.value = row.whitelistVersionInfo.updateNotice || '';
 		}
 
-		// 正式版本信息
 		if (row.generalVersionInfo) {
 			generalAppVersion.value = row.generalVersionInfo.appVersion;
 			generalResVersion.value = row.generalVersionInfo.resVersion;
@@ -507,20 +653,14 @@ const openDrawer = async (row?: ClientVersionRuleOutput) => {
 
 	drawer.visible = true;
 
-	// 加载 AppVersion 和白名单选项
 	if (drawer.form.channelId && drawer.form.platform) {
 		await loadAppVersions();
-		await loadWhitelistOptions();
+	}
+	await loadWhitelistOptions();
 
-		// 如果是编辑模式，加载资源版本
-		if (row?.ruleId) {
-			if (whitelistAppVersion.value) {
-				await onWhitelistAppVersionChange();
-			}
-			if (generalAppVersion.value) {
-				await onGeneralAppVersionChange();
-			}
-		}
+	if (row?.ruleId) {
+		if (whitelistAppVersion.value) await onWhitelistAppVersionChange(true);
+		if (generalAppVersion.value) await onGeneralAppVersionChange(true);
 	}
 };
 
@@ -534,7 +674,7 @@ const resetDrawer = () => {
 		rootPath: '/',
 		resourceDomain: '',
 		whitelistTesterEntryIds: [],
-	};
+	} as DrawerForm;
 
 	whitelistAppVersion.value = '';
 	whitelistResVersion.value = '';
@@ -561,7 +701,6 @@ const submitDrawer = () => {
 	drawerFormRef.value?.validate(async (valid) => {
 		if (!valid) return;
 
-		// 构建白名单版本信息
 		let whitelistVersionInfo: ClientAppVersionInfoDto | undefined;
 		if (whitelistAppVersion.value && whitelistResVersion.value) {
 			whitelistVersionInfo = {
@@ -574,7 +713,6 @@ const submitDrawer = () => {
 			};
 		}
 
-		// 构建正式版本信息
 		let generalVersionInfo: ClientAppVersionInfoDto | undefined;
 		if (generalAppVersion.value && generalResVersion.value) {
 			generalVersionInfo = {
@@ -615,14 +753,17 @@ const handlePublish = async (row: ClientVersionRuleOutput) => {
 
 	try {
 		await ElMessageBox.confirm(
-			`确定要将白名单版本发布为正式版本吗？
-			<br><br>
-			<strong>白名单版本：</strong><br>
-			App: ${row.whitelistVersionInfo.appVersion}<br>
-			资源: ${row.whitelistVersionInfo.resVersion}<br><br>
-			<strong>当前正式版本：</strong><br>
-			${row.generalVersionInfo ? `App: ${row.generalVersionInfo.appVersion}<br>资源: ${row.generalVersionInfo.resVersion}` : '未配置'}
-			`,
+			`确定将白名单版本发布为正式版本吗？
+			<br/><br/>
+			<strong>白名单版本：</strong><br/>
+			App：${row.whitelistVersionInfo.appVersion}<br/>
+			资源：${row.whitelistVersionInfo.resVersion}<br/><br/>
+			<strong>当前正式版本：</strong><br/>
+			${
+				row.generalVersionInfo
+					? `App：${row.generalVersionInfo.appVersion}<br/>资源：${row.generalVersionInfo.resVersion}`
+					: '未配置'
+			}`,
 			'确认发布',
 			{
 				confirmButtonText: '确定发布',
@@ -680,6 +821,37 @@ onMounted(() => {
 	.text-secondary {
 		color: var(--el-text-color-secondary);
 		font-size: 12px;
+	}
+
+	.res-option {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.res-option-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+	}
+
+	.res-option-name {
+		flex: 1;
+		margin-right: 8px;
+	}
+
+	.option-meta {
+		font-size: 12px;
+		color: var(--el-text-color-secondary);
+	}
+
+	:deep(.res-option-item) {
+		height: auto;
+		line-height: 1.4;
+		padding-top: 6px;
+		padding-bottom: 6px;
+		align-items: flex-start;
 	}
 }
 </style>

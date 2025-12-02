@@ -10,7 +10,7 @@
         //"ConfigId": "1300000000001", // 默认库标识-禁止修改
         "DbType": "MySql", // MySql、SqlServer、Sqlite、Oracle、PostgreSQL、Dm、Kdbndp、Oscar、MySqlConnector、Access、OpenGauss、QuestDB、HG、ClickHouse、GBase、Odbc、Custom
         "DbNickName": "系统库",
-        "ConnectionString": "Server=127.0.0.1;Port=3306;Database=game_admin;Uid=root;Pwd=123456;SslMode=None;AllowUserVariables=True;AllowLoadLocalInfile=True;"
+        "ConnectionString": "Server=127.0.0.1;Port=3306;Database=game_admin;Uid=root;Pwd=123456;SslMode=None;AllowUserVariables=True;AllowLoadLocalInfile=True;AllowPublicKeyRetrieval=True;"
       , // Sqlite
         //"ConnectionString": "PORT=5432;DATABASE=xxx;HOST=localhost;PASSWORD=xxx;USER ID=xxx", // PostgreSQL
         //"ConnectionString": "Server=localhost;Database=xxx;Uid=xxx;Pwd=xxx;SslMode=None;AllowLoadLocalInfile=true;AllowUserVariables=true;", // MySql,
