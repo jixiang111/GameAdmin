@@ -16,6 +16,16 @@ export interface ClientOssConfigOutput {
 	remark?: string;
 }
 
+export interface ClientOssConfigSummaryOutput {
+	id: number | string;
+	provider: string;
+	bucketName: string;
+	rootPath: string;
+	resourceDomain?: string;
+	isDefault: boolean;
+	remark?: string;
+}
+
 export interface ClientOssConfigInput {
 	provider?: string;
 	accessKeyId: string;
@@ -63,6 +73,7 @@ export interface ClientAppVersionInfoDto {
 	resVersionTimestamp?: number;
 	resVersionFileSize?: number;
 	updateUrl?: string;
+	updateResUrls?: string[];
 	updateNotice?: string;
 	loginUrl?: string;
 	description?: string;
@@ -74,6 +85,8 @@ export interface ClientVersionRuleOutput {
 	channelId: string;
 	channelName: string;
 	platform: ClientPlatform;
+	provider: string;
+	ossConfigId?: number | string;
 	bucketName: string;
 	rootPath: string;
 	resourceDomain?: string;
@@ -93,6 +106,8 @@ export interface ClientVersionRuleSaveInput {
 	channelId: string;
 	channelName: string;
 	platform: ClientPlatform;
+	provider: string;
+	ossConfigId?: number | string;
 	bucketName: string;
 	rootPath?: string;
 	resourceDomain?: string;
@@ -156,14 +171,23 @@ const requestWithFallback = async <T = any>(config: AxiosRequestConfig, fallback
 /**
  * 获取 OSS 配置
  */
-export const getOssConfig = (provider = 'aliyun') =>
+export const getOssConfig = (provider?: string) =>
 	requestWithFallback<ClientOssConfigOutput>(
 		{
 			url: '/api/clientVersion/ossConfig',
 			method: 'get',
-			params: { provider },
+			params: provider ? { provider } : undefined,
 		},
 		['/api/clientVersion/oss-config', '/api/clientVersion/getOssConfig']
+	);
+
+export const getOssConfigList = () =>
+	requestWithFallback<ClientOssConfigSummaryOutput[]>(
+		{
+			url: '/api/clientVersion/ossConfigList',
+			method: 'get',
+		},
+		['/api/clientVersion/oss-config/list']
 	);
 
 /**
@@ -295,6 +319,8 @@ export const deleteRule = (ruleId: number | string) =>
 export const getAppVersions = (params: {
 	channelId: string;
 	platform: ClientPlatform;
+	provider?: string;
+	ossConfigId?: number | string;
 	bucketName?: string;
 	rootPath?: string;
 }) =>
@@ -314,6 +340,8 @@ export const getResVersions = (params: {
 	channelId: string;
 	platform: ClientPlatform;
 	appVersion: string;
+	provider?: string;
+	ossConfigId?: number | string;
 	bucketName?: string;
 	rootPath?: string;
 }) =>

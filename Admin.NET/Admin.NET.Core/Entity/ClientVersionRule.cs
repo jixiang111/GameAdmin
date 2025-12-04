@@ -15,6 +15,19 @@ namespace Admin.NET.Core;
 public sealed class ClientVersionRule : EntityBase
 {
     /// <summary>
+    /// 存储提供商
+    /// </summary>
+    [SugarColumn(ColumnDescription = "存储提供商", Length = 32)]
+    [Required, MaxLength(32)]
+    public string Provider { get; set; } = "aliyun";
+
+    /// <summary>
+    /// 对象存储配置 Id
+    /// </summary>
+    [SugarColumn(ColumnDescription = "对象存储配置Id", IsNullable = true)]
+    public long? OssConfigId { get; set; }
+
+    /// <summary>
     /// 渠道 ID
     /// </summary>
     [SugarColumn(ColumnDescription = "渠道ID", Length = 64)]

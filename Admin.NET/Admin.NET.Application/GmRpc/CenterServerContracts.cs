@@ -103,6 +103,7 @@ public class AppVersionInfo
     public string AppVersion { get; set; } = string.Empty;
     public string ResVersion { get; set; } = string.Empty;
     public string UpdateUrl { get; set; } = string.Empty;
+    public List<string> UpdateResUrls { get; set; } = new();
     public string ChannelName { get; set; } = string.Empty;
     public string UpdateNotice { get; set; } = string.Empty;
     public string LoginUrl { get; set; } = string.Empty;

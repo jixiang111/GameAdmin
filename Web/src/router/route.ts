@@ -29,18 +29,18 @@ export const clientVersionRoute: RouteRecordRaw = {
 	path: '/dashboard/client-version',
 	name: 'clientVersion',
 	component: () => import('/@/layout/routerView/parent.vue'),
-	redirect: '/dashboard/client-version/oss',
+	redirect: '/dashboard/client-version/storage',
 	meta: {
 		title: '客户端版本管理',
 		icon: 'ele-Setting',
 	},
 	children: [
 		{
-			path: '/dashboard/client-version/oss',
-			name: 'clientVersionOss',
+			path: '/dashboard/client-version/storage',
+			name: 'clientVersionStorage',
 			component: () => import('/@/views/workbench/clientVersion/ossConfig.vue'),
 			meta: {
-				title: 'OSS 参数设置',
+				title: '对象存储参数设置',
 				isKeepAlive: true,
 			},
 		},
@@ -103,11 +103,11 @@ export const clientVersionMenuRaw = {
 			id: 0,
 			pid: 0,
 			type: 2,
-			name: 'clientVersionOss',
-			path: '/dashboard/client-version/oss',
+			name: 'clientVersionStorage',
+			path: '/dashboard/client-version/storage',
 			component: '/workbench/clientVersion/ossConfig',
 			meta: {
-				title: 'OSS 参数设置',
+				title: '对象存储参数设置',
 				icon: 'ele-Connection',
 				isKeepAlive: true,
 			},

@@ -12,7 +12,7 @@ namespace Admin.NET.Application.Service.ClientVersion.Dto;
 
 public sealed class ClientOssConfigQueryInput
 {
-    public string Provider { get; set; } = "aliyun";
+    public string? Provider { get; set; }
 }
 
 public sealed class ClientOssConfigInput
@@ -66,6 +66,17 @@ public sealed class ClientOssConfigOutput
     public DateTime CreateTime { get; set; }
     public DateTime? UpdateTime { get; set; }
     public string? UpdatedBy { get; set; }
+}
+
+public sealed class ClientOssConfigSummaryOutput
+{
+    public long Id { get; set; }
+    public string Provider { get; set; }
+    public string BucketName { get; set; }
+    public string RootPath { get; set; }
+    public string? ResourceDomain { get; set; }
+    public bool IsDefault { get; set; }
+    public string? Remark { get; set; }
 }
 
 #endregion
@@ -142,6 +153,11 @@ public sealed class ClientVersionRuleSaveInput
     [Required]
     public ClientPlatform Platform { get; set; }
 
+    [Required, MaxLength(32)]
+    public string Provider { get; set; } = "aliyun";
+
+    public long? OssConfigId { get; set; }
+
     [Required, MaxLength(128)]
     public string BucketName { get; set; }
 
@@ -184,6 +200,8 @@ public sealed class ClientVersionRuleOutput
     public string ChannelId { get; set; }
     public string ChannelName { get; set; }
     public ClientPlatform Platform { get; set; }
+    public string Provider { get; set; }
+    public long? OssConfigId { get; set; }
     public string BucketName { get; set; }
     public string RootPath { get; set; }
     public string? ResourceDomain { get; set; }
@@ -213,6 +231,8 @@ public sealed class ClientAppVersionInfoDto
     [MaxLength(512)]
     public string? UpdateUrl { get; set; }
 
+    public List<string>? UpdateResUrls { get; set; }
+
     [MaxLength(1024)]
     public string? UpdateNotice { get; set; }
 
@@ -232,6 +252,10 @@ public class ChannelAppVersionQuery
 
     [Required]
     public ClientPlatform Platform { get; set; }
+
+    public string? Provider { get; set; }
+
+    public long? OssConfigId { get; set; }
 
     /// <summary>
     /// 可选：当规则尚未保存时传递临时桶信息

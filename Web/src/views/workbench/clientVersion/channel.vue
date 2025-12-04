@@ -32,6 +32,11 @@
 						<el-tag :type="getPlatformTagType(scope.row.platform)" size="small">{{ getPlatformName(scope.row.platform) }}</el-tag>
 					</template>
 				</el-table-column>
+				<el-table-column label="对象存储" width="140" align="center">
+					<template #default="scope">
+						<el-tag type="info" size="small">{{ getProviderLabel(scope.row.provider) }}</el-tag>
+					</template>
+				</el-table-column>
 				<el-table-column label="白名单测试版本" min-width="220">
 					<template #default="scope">
 						<div v-if="scope.row.whitelistVersionInfo">
@@ -117,8 +122,26 @@
 					<el-text class="form-tip">选择后不可修改，每个渠道+平台仅允许存在一条规则</el-text>
 				</el-form-item>
 
-				<el-form-item label="OSS Bucket">
-					<el-input v-model="drawer.form.bucketName" placeholder="留空则使用全局 OSS 配置的 Bucket" clearable />
+				<el-form-item label="对象存储参数" prop="ossConfigId">
+					<el-select
+						v-model="drawer.form.ossConfigId"
+						placeholder="请选择对象存储配置"
+						:loading="ossConfigLoading"
+						:disabled="ossConfigOptions.length === 0"
+						@change="onOssConfigChange"
+					>
+						<el-option
+							v-for="item in ossConfigOptions"
+							:key="item.id"
+							:label="formatConfigLabel(item)"
+							:value="item.id"
+						/>
+					</el-select>
+					<el-text class="form-tip">选择后自动带入对应的 Bucket / 域名 / RootPath</el-text>
+				</el-form-item>
+
+				<el-form-item label="对象存储 Bucket">
+					<el-input v-model="drawer.form.bucketName" placeholder="留空则使用全局对象存储配置的 Bucket" clearable />
 				</el-form-item>
 
 				<el-form-item label="根路径 (RootPath)">
@@ -169,6 +192,30 @@
 
 				<el-form-item label="更新地址">
 					<el-input v-model="whitelistUpdateUrl" placeholder="可选，客户端下载地址" />
+				</el-form-item>
+
+				<el-form-item label="资源更新地址">
+					<div class="res-url-editor">
+						<div
+							v-for="(url, index) in whitelistUpdateResUrls"
+							:key="`whitelist-url-${index}`"
+							class="res-url-row"
+						>
+							<el-input v-model="whitelistUpdateResUrls[index]" placeholder="https://cdn.example.com/res" />
+							<el-button
+								text
+								type="danger"
+								icon="ele-Delete"
+								@click="removeUpdateResUrl('whitelist', index)"
+							/>
+						</div>
+						<div class="res-url-actions">
+							<el-button type="primary" link icon="ele-Plus" @click="addUpdateResUrl('whitelist')">
+								新增地址
+							</el-button>
+							<el-text class="form-tip">按顺序尝试多个资源增量/热更地址，可选</el-text>
+						</div>
+					</div>
 				</el-form-item>
 
 				<el-form-item label="登录地址">
@@ -246,6 +293,26 @@
 					<el-input v-model="generalUpdateUrl" placeholder="可选，客户端下载地址" />
 				</el-form-item>
 
+				<el-form-item label="资源更新地址">
+					<div class="res-url-editor">
+						<div v-for="(url, index) in generalUpdateResUrls" :key="`general-url-${index}`" class="res-url-row">
+							<el-input v-model="generalUpdateResUrls[index]" placeholder="https://cdn.example.com/res" />
+							<el-button
+								text
+								type="danger"
+								icon="ele-Delete"
+								@click="removeUpdateResUrl('general', index)"
+							/>
+						</div>
+						<div class="res-url-actions">
+							<el-button type="primary" link icon="ele-Plus" @click="addUpdateResUrl('general')">
+								新增地址
+							</el-button>
+							<el-text class="form-tip">客户端会依次尝试多个资源更新地址，可选</el-text>
+						</div>
+					</div>
+				</el-form-item>
+
 				<el-form-item label="登录地址">
 					<el-input v-model="generalLoginUrl" placeholder="可选，登录服务器地址" />
 				</el-form-item>
@@ -275,18 +342,28 @@ import {
 	getAppVersions,
 	getResVersions,
 	getWhitelistList,
+	getOssConfigList,
 	type ClientVersionRuleOutput,
 	type ClientVersionRuleSaveInput,
 	type ChannelAppVersionItem,
 	type ChannelResVersionItem,
 	type ClientWhitelistOutput,
 	type ClientAppVersionInfoDto,
+	type ClientOssConfigSummaryOutput,
 	ClientPlatform,
 } from '/@/api/clientVersion';
 
 interface DrawerForm extends ClientVersionRuleSaveInput {
 	whitelistTesterEntryIds: Array<number | string>;
 }
+
+const providerNameMap: Record<string, string> = {
+	aliyun: '阿里云 OSS',
+	'tencent-cos': '腾讯云 COS',
+};
+
+const ossConfigOptions = ref<ClientOssConfigSummaryOutput[]>([]);
+const ossConfigLoading = ref(false);
 
 const query = reactive({
 	channelId: '',
@@ -295,6 +372,18 @@ const query = reactive({
 
 const loading = ref(false);
 const tableData = ref<ClientVersionRuleOutput[]>([]);
+const defaultOssConfigId = computed<ClientOssConfigSummaryOutput['id'] | undefined>(() => {
+	if (ossConfigOptions.value.length === 0) return undefined;
+	return ossConfigOptions.value.find((item) => item.isDefault)?.id ?? ossConfigOptions.value[0].id;
+});
+
+const formatConfigLabel = (item: ClientOssConfigSummaryOutput) => {
+	const name = providerNameMap[item.provider] || item.provider;
+	const bucket = item.bucketName ? ` / ${item.bucketName}` : '';
+	const remark = item.remark ? `（${item.remark}）` : '';
+	const suffix = item.isDefault ? '（当前使用）' : '';
+	return `${name}${bucket}${remark}${suffix}`;
+};
 
 const handleQuery = async () => {
 	loading.value = true;
@@ -332,6 +421,10 @@ const getPlatformTagType = (platform: ClientPlatform): string => {
 	return map[platform] || 'info';
 };
 
+const getProviderLabel = (value: string): string => {
+	return providerNameMap[value] || value;
+};
+
 const drawerFormRef = ref<FormInstance>();
 const drawer = reactive({
 	visible: false,
@@ -342,6 +435,8 @@ const drawer = reactive({
 		channelId: '',
 		channelName: '',
 		platform: undefined,
+		provider: '',
+		ossConfigId: undefined,
 		bucketName: '',
 		rootPath: '/',
 		resourceDomain: '',
@@ -355,12 +450,57 @@ const drawerRules: FormRules<ClientVersionRuleSaveInput> = {
 	channelId: [{ required: true, message: '请输入渠道ID', trigger: 'blur' }],
 	channelName: [{ required: true, message: '请输入渠道名称', trigger: 'blur' }],
 	platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
+	ossConfigId: [{ required: true, message: '请选择对象存储配置', trigger: 'change' }],
+};
+
+const applyConfigDefaults = (configId: ClientOssConfigSummaryOutput['id'], force = false) => {
+	if (configId === undefined || configId === null) return;
+	const config = ossConfigOptions.value.find((item) => item.id === configId);
+	if (!config) return;
+	drawer.form.provider = config.provider;
+	if (!drawer.form.bucketName || force) drawer.form.bucketName = config.bucketName || '';
+	if (!drawer.form.rootPath || force) drawer.form.rootPath = config.rootPath || '/';
+	if (!drawer.form.resourceDomain || force) drawer.form.resourceDomain = config.resourceDomain || '';
+};
+
+const ensureOssConfigSelection = (force = false) => {
+	if (ossConfigOptions.value.length === 0) {
+		drawer.form.ossConfigId = undefined;
+		drawer.form.provider = '';
+		return;
+	}
+	if (!drawer.form.ossConfigId || force) {
+		const next = defaultOssConfigId.value;
+		if (next !== undefined && next !== null) {
+			drawer.form.ossConfigId = next;
+			applyConfigDefaults(next, true);
+		}
+	}
+};
+
+const loadOssConfigs = async () => {
+	ossConfigLoading.value = true;
+	try {
+		const res: any = await getOssConfigList();
+		ossConfigOptions.value = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
+		ensureOssConfigSelection();
+	} catch (error: any) {
+		ElMessage.error(error?.response?.data?.message || error?.message || '加载对象存储配置失败');
+	} finally {
+		ossConfigLoading.value = false;
+	}
+};
+
+const onOssConfigChange = () => {
+	if (drawer.form.ossConfigId === undefined || drawer.form.ossConfigId === null) return;
+	applyConfigDefaults(drawer.form.ossConfigId, !isEditing.value);
 };
 
 const whitelistAppVersion = ref('');
 const whitelistResVersion = ref('');
 const whitelistForceUpdate = ref(false);
 const whitelistUpdateUrl = ref('');
+const whitelistUpdateResUrls = ref<string[]>([]);
 const whitelistLoginUrl = ref('');
 const whitelistUpdateNotice = ref('');
 
@@ -368,6 +508,7 @@ const generalAppVersion = ref('');
 const generalResVersion = ref('');
 const generalForceUpdate = ref(false);
 const generalUpdateUrl = ref('');
+const generalUpdateResUrls = ref<string[]>([]);
 const generalLoginUrl = ref('');
 const generalUpdateNotice = ref('');
 
@@ -405,18 +546,25 @@ const loadAppVersions = async () => {
 		return;
 	}
 
+	if (!drawer.form.ossConfigId) {
+		ElMessage.warning('请先选择对象存储配置');
+		return;
+	}
+
 	appVersionsLoading.value = true;
 	try {
 		const res: any = await getAppVersions({
 			channelId: drawer.form.channelId,
 			platform: drawer.form.platform,
+			provider: drawer.form.provider,
+			ossConfigId: drawer.form.ossConfigId,
 			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
 		appVersions.value = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
 
 		if (appVersions.value.length === 0) {
-			ElMessage.warning('未找到任何 AppVersion，请确认 OSS 目录中存在版本文件夹');
+			ElMessage.warning('未找到任何 AppVersion，请确认对象存储目录中存在版本文件夹');
 		}
 	} catch (error: any) {
 		ElMessage.error(error?.response?.data?.message || error?.message || '加载 AppVersion 失败');
@@ -438,10 +586,17 @@ const onWhitelistAppVersionChange = async (arg?: boolean | { preserveSelection?:
 
 	whitelistResVersionsLoading.value = true;
 	try {
+		if (!drawer.form.ossConfigId) {
+			ElMessage.warning('请先选择对象存储配置');
+			return;
+		}
+
 		const res: any = await getResVersions({
 			channelId: drawer.form.channelId,
 			platform: drawer.form.platform!,
 			appVersion: whitelistAppVersion.value,
+			provider: drawer.form.provider,
+			ossConfigId: drawer.form.ossConfigId,
 			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
@@ -487,10 +642,17 @@ const onGeneralAppVersionChange = async (arg?: boolean | { preserveSelection?: b
 
 	generalResVersionsLoading.value = true;
 	try {
+		if (!drawer.form.ossConfigId) {
+			ElMessage.warning('请先选择对象存储配置');
+			return;
+		}
+
 		const res: any = await getResVersions({
 			channelId: drawer.form.channelId,
 			platform: drawer.form.platform!,
 			appVersion: generalAppVersion.value,
+			provider: drawer.form.provider,
+			ossConfigId: drawer.form.ossConfigId,
 			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
@@ -530,6 +692,38 @@ const loadWhitelistOptions = async () => {
 	} catch (error: any) {
 		ElMessage.error(error?.response?.data?.message || error?.message || '加载白名单失败');
 	}
+};
+
+const getUpdateResUrlList = (type: 'general' | 'whitelist') =>
+	type === 'general' ? generalUpdateResUrls.value : whitelistUpdateResUrls.value;
+
+const addUpdateResUrl = (type: 'general' | 'whitelist') => {
+	getUpdateResUrlList(type).push('');
+};
+
+const removeUpdateResUrl = (type: 'general' | 'whitelist', index: number) => {
+	const list = getUpdateResUrlList(type);
+	list.splice(index, 1);
+};
+
+const sanitizeUpdateResUrls = (urls: string[]): string[] | undefined => {
+	const normalized = urls
+		.map((item) => (item || '').trim())
+		.filter((item) => !!item);
+
+	if (normalized.length === 0) return undefined;
+
+	const seen = new Set<string>();
+	const result: string[] = [];
+	normalized.forEach((item) => {
+		const key = item.toLowerCase();
+		if (!seen.has(key)) {
+			seen.add(key);
+			result.push(item);
+		}
+	});
+
+	return result.length > 0 ? result : undefined;
 };
 
 const formatResVersionLabel = (item: ChannelResVersionItem): string => {
@@ -617,6 +811,14 @@ const formatDateTime = (date: Date): string => {
 };
 
 const openDrawer = async (row?: ClientVersionRuleOutput) => {
+	if (!ossConfigOptions.value.length) {
+		await loadOssConfigs();
+		if (!ossConfigOptions.value.length) {
+			ElMessage.warning('请先配置对象存储参数');
+			return;
+		}
+	}
+
 	resetDrawer();
 
 	if (row?.ruleId) {
@@ -625,6 +827,17 @@ const openDrawer = async (row?: ClientVersionRuleOutput) => {
 		drawer.form.channelId = row.channelId;
 		drawer.form.channelName = row.channelName;
 		drawer.form.platform = row.platform;
+		drawer.form.provider = row.provider || '';
+		drawer.form.ossConfigId = row.ossConfigId ?? drawer.form.ossConfigId;
+		if (!drawer.form.ossConfigId && row.provider) {
+			const matched = ossConfigOptions.value.find((item) => item.provider === row.provider);
+			if (matched) {
+				drawer.form.ossConfigId = matched.id;
+			}
+		}
+		if (drawer.form.ossConfigId !== undefined && drawer.form.ossConfigId !== null) {
+			applyConfigDefaults(drawer.form.ossConfigId, false);
+		}
 		drawer.form.bucketName = row.bucketName;
 		drawer.form.rootPath = row.rootPath;
 		drawer.form.resourceDomain = row.resourceDomain || '';
@@ -635,6 +848,9 @@ const openDrawer = async (row?: ClientVersionRuleOutput) => {
 			whitelistResVersion.value = row.whitelistVersionInfo.resVersion;
 			whitelistForceUpdate.value = row.whitelistVersionInfo.forceUpdate;
 			whitelistUpdateUrl.value = row.whitelistVersionInfo.updateUrl || '';
+			whitelistUpdateResUrls.value = row.whitelistVersionInfo.updateResUrls
+				? [...row.whitelistVersionInfo.updateResUrls]
+				: [];
 			whitelistLoginUrl.value = row.whitelistVersionInfo.loginUrl || '';
 			whitelistUpdateNotice.value = row.whitelistVersionInfo.updateNotice || '';
 		}
@@ -644,11 +860,17 @@ const openDrawer = async (row?: ClientVersionRuleOutput) => {
 			generalResVersion.value = row.generalVersionInfo.resVersion;
 			generalForceUpdate.value = row.generalVersionInfo.forceUpdate;
 			generalUpdateUrl.value = row.generalVersionInfo.updateUrl || '';
+			generalUpdateResUrls.value = row.generalVersionInfo.updateResUrls
+				? [...row.generalVersionInfo.updateResUrls]
+				: [];
 			generalLoginUrl.value = row.generalVersionInfo.loginUrl || '';
 			generalUpdateNotice.value = row.generalVersionInfo.updateNotice || '';
 		}
 	} else {
 		drawer.title = '新增版本规则';
+		if (drawer.form.ossConfigId !== undefined && drawer.form.ossConfigId !== null) {
+			applyConfigDefaults(drawer.form.ossConfigId, true);
+		}
 	}
 
 	drawer.visible = true;
@@ -670,6 +892,8 @@ const resetDrawer = () => {
 		channelId: '',
 		channelName: '',
 		platform: undefined,
+		provider: '',
+		ossConfigId: undefined,
 		bucketName: '',
 		rootPath: '/',
 		resourceDomain: '',
@@ -680,6 +904,7 @@ const resetDrawer = () => {
 	whitelistResVersion.value = '';
 	whitelistForceUpdate.value = false;
 	whitelistUpdateUrl.value = '';
+	whitelistUpdateResUrls.value = [];
 	whitelistLoginUrl.value = '';
 	whitelistUpdateNotice.value = '';
 
@@ -687,6 +912,7 @@ const resetDrawer = () => {
 	generalResVersion.value = '';
 	generalForceUpdate.value = false;
 	generalUpdateUrl.value = '';
+	generalUpdateResUrls.value = [];
 	generalLoginUrl.value = '';
 	generalUpdateNotice.value = '';
 
@@ -695,6 +921,7 @@ const resetDrawer = () => {
 	generalResVersions.value = [];
 
 	drawerFormRef.value?.clearValidate();
+	ensureOssConfigSelection(true);
 };
 
 const submitDrawer = () => {
@@ -711,6 +938,10 @@ const submitDrawer = () => {
 				loginUrl: whitelistLoginUrl.value || undefined,
 				updateNotice: whitelistUpdateNotice.value || undefined,
 			};
+			const urls = sanitizeUpdateResUrls(whitelistUpdateResUrls.value);
+			if (urls) {
+				whitelistVersionInfo.updateResUrls = urls;
+			}
 		}
 
 		let generalVersionInfo: ClientAppVersionInfoDto | undefined;
@@ -723,6 +954,10 @@ const submitDrawer = () => {
 				loginUrl: generalLoginUrl.value || undefined,
 				updateNotice: generalUpdateNotice.value || undefined,
 			};
+			const urls = sanitizeUpdateResUrls(generalUpdateResUrls.value);
+			if (urls) {
+				generalVersionInfo.updateResUrls = urls;
+			}
 		}
 
 		const saveData: ClientVersionRuleSaveInput = {
@@ -798,6 +1033,7 @@ const handleDelete = async (row: ClientVersionRuleOutput) => {
 };
 
 onMounted(() => {
+	loadOssConfigs();
 	handleQuery();
 });
 </script>
@@ -852,6 +1088,29 @@ onMounted(() => {
 		padding-top: 6px;
 		padding-bottom: 6px;
 		align-items: flex-start;
+	}
+
+	.res-url-editor {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		width: 100%;
+	}
+
+	.res-url-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.res-url-row :deep(.el-input) {
+		flex: 1;
+	}
+
+	.res-url-actions {
+		display: flex;
+		align-items: center;
+		gap: 12px;
 	}
 }
 </style>

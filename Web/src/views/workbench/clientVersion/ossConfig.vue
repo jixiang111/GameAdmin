@@ -3,7 +3,8 @@
 		<el-card shadow="hover">
 			<template #header>
 				<div class="card-header">
-					<span>阿里云 OSS 配置</span>
+					<span>对象存储参数设置</span>
+					<el-tag type="success" v-if="form.provider">{{ currentProviderLabel }}</el-tag>
 					<el-button type="primary" size="small" @click="loadConfig">
 						<el-icon><ele-Refresh /></el-icon>
 						刷新
@@ -11,10 +12,13 @@
 				</div>
 			</template>
 			<el-form ref="formRef" :model="form" :rules="rules" label-width="160px" class="oss-form">
-				<el-form-item label="Provider">
-					<el-input v-model="form.provider" disabled placeholder="aliyun" />
-					<el-text class="form-tip">当前仅支持阿里云OSS，后续可扩展其他厂商</el-text>
+				<el-form-item label="对象存储厂商" prop="provider">
+					<el-select v-model="form.provider" placeholder="请选择厂商" @change="handleProviderChange">
+						<el-option v-for="item in providerOptions" :key="item.value" :label="item.label" :value="item.value" />
+					</el-select>
+					<el-text class="form-tip">当前支持阿里云 OSS、腾讯云 COS</el-text>
 				</el-form-item>
+
 				<el-form-item label="AccessKey ID" prop="accessKeyId">
 					<el-input v-model="form.accessKeyId" placeholder="请输入 AccessKeyId" clearable />
 				</el-form-item>
@@ -23,12 +27,12 @@
 					<el-text v-if="maskedSecret" class="form-tip">当前值：{{ maskedSecret }}</el-text>
 				</el-form-item>
 				<el-form-item label="Endpoint" prop="endpoint">
-					<el-input v-model="form.endpoint" placeholder="例如：oss-cn-hangzhou.aliyuncs.com" clearable />
+					<el-input v-model="form.endpoint" placeholder="例如：oss-cn-hangzhou.aliyuncs.com 或 cos.ap-shanghai.myqcloud.com" clearable />
 				</el-form-item>
 				<el-form-item label="Bucket 名称" prop="bucketName">
 					<el-input v-model="form.bucketName" placeholder="请输入 Bucket 名称" clearable />
 				</el-form-item>
-				<el-form-item label="设为默认配置">
+				<el-form-item label="设为当前使用">
 					<el-switch v-model="form.isDefault" />
 				</el-form-item>
 				<el-form-item label="备注">
@@ -55,9 +59,14 @@ import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import { getOssConfig, saveOssConfig, type ClientOssConfigInput } from '/@/api/clientVersion';
 
+const providerOptions = [
+	{ label: '阿里云 OSS', value: 'aliyun' },
+	{ label: '腾讯云 COS', value: 'tencent-cos' },
+];
+
 const formRef = ref<FormInstance>();
 const form = reactive<ClientOssConfigInput>({
-	provider: 'aliyun',
+	provider: '',
 	accessKeyId: '',
 	accessKeySecret: '',
 	endpoint: '',
@@ -69,6 +78,7 @@ const form = reactive<ClientOssConfigInput>({
 });
 const saving = ref(false);
 const maskedSecret = ref('');
+const currentProviderLabel = ref('');
 
 const rules: FormRules<ClientOssConfigInput> = {
 	accessKeyId: [{ required: true, message: '请输入 AccessKeyId', trigger: 'blur' }],
@@ -77,35 +87,42 @@ const rules: FormRules<ClientOssConfigInput> = {
 };
 
 const loadConfig = async () => {
+	const provider = form.provider || undefined;
 	try {
-		const res: any = await getOssConfig('aliyun');
+		const res: any = await getOssConfig(provider);
 		const data = res.data?.result ?? res.data?.data ?? res.data ?? {};
 
-		form.provider = data.provider || 'aliyun';
-	form.accessKeyId = data.accessKeyId || '';
-	form.endpoint = data.endpoint || '';
-	form.bucketName = data.bucketName || '';
-	form.isDefault = data.isDefault !== undefined ? data.isDefault : true;
-	form.remark = data.remark || '';
+		form.provider = data.provider || form.provider || 'aliyun';
+		form.accessKeyId = data.accessKeyId || '';
+		form.endpoint = data.endpoint || '';
+		form.bucketName = data.bucketName || '';
+		form.isDefault = data.isDefault !== undefined ? data.isDefault : true;
+		form.remark = data.remark || '';
 
-		// 显示掩码后的密钥
 		maskedSecret.value = data.accessKeySecretMasked || '';
-		form.accessKeySecret = ''; // 清空输入框，避免显示掩码值
+		form.accessKeySecret = '';
 
-		ElMessage.success('OSS 配置已加载');
+		const current = providerOptions.find((opt) => opt.value === form.provider);
+		currentProviderLabel.value = current?.label || '';
+
+		ElMessage.success('对象存储配置已加载');
 	} catch (error: any) {
-		const errorMsg = error?.response?.data?.message || error?.message || 'OSS配置加载失败';
+		const errorMsg = error?.response?.data?.message || error?.message || '对象存储配置加载失败';
 		ElMessage.warning(errorMsg);
-		// 重置表单
-	form.accessKeyId = '';
-	form.endpoint = '';
-	form.bucketName = '';
-	form.resourceDomain = '';
-	form.region = '';
+		form.accessKeyId = '';
+		form.endpoint = '';
+		form.bucketName = '';
+		form.resourceDomain = '';
+		form.region = '';
 		form.isDefault = true;
 		form.remark = '';
+		currentProviderLabel.value = '';
 		maskedSecret.value = '';
 	}
+};
+
+const handleProviderChange = () => {
+	loadConfig();
 };
 
 const handleSave = () => {
@@ -115,20 +132,15 @@ const handleSave = () => {
 		saving.value = true;
 		try {
 			const saveData = { ...form };
-			// 如果 AccessKeySecret 为空，后端会保持原值不变
 			if (!saveData.accessKeySecret) {
 				delete saveData.accessKeySecret;
 			}
-			// RootPath 固定使用后端默认值，不暴露给前端配置
 			delete (saveData as any).rootPath;
-			// 关闭未使用字段
 			delete (saveData as any).resourceDomain;
 			delete (saveData as any).region;
 
 			await saveOssConfig(saveData);
-			ElMessage.success('OSS 配置已保存');
-
-			// 重新加载配置
+			ElMessage.success('对象存储配置已保存');
 			await loadConfig();
 		} catch (error: any) {
 			const errorMsg = error?.response?.data?.message || error?.message || '保存失败';
