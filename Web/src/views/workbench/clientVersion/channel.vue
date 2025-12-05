@@ -137,11 +137,7 @@
 							:value="item.id"
 						/>
 					</el-select>
-					<el-text class="form-tip">选择后自动带入对应的 Bucket / 域名 / RootPath</el-text>
-				</el-form-item>
-
-				<el-form-item label="对象存储 Bucket">
-					<el-input v-model="drawer.form.bucketName" placeholder="留空则使用全局对象存储配置的 Bucket" clearable />
+					<el-text class="form-tip">选择后自动使用对应的 Bucket、域名、RootPath</el-text>
 				</el-form-item>
 
 				<el-form-item label="根路径 (RootPath)">
@@ -458,7 +454,6 @@ const applyConfigDefaults = (configId: ClientOssConfigSummaryOutput['id'], force
 	const config = ossConfigOptions.value.find((item) => item.id === configId);
 	if (!config) return;
 	drawer.form.provider = config.provider;
-	if (!drawer.form.bucketName || force) drawer.form.bucketName = config.bucketName || '';
 	if (!drawer.form.rootPath || force) drawer.form.rootPath = config.rootPath || '/';
 	if (!drawer.form.resourceDomain || force) drawer.form.resourceDomain = config.resourceDomain || '';
 };
@@ -558,7 +553,6 @@ const loadAppVersions = async () => {
 			platform: drawer.form.platform,
 			provider: drawer.form.provider,
 			ossConfigId: drawer.form.ossConfigId,
-			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
 		appVersions.value = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
@@ -597,7 +591,6 @@ const onWhitelistAppVersionChange = async (arg?: boolean | { preserveSelection?:
 			appVersion: whitelistAppVersion.value,
 			provider: drawer.form.provider,
 			ossConfigId: drawer.form.ossConfigId,
-			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
 		const list = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
@@ -653,7 +646,6 @@ const onGeneralAppVersionChange = async (arg?: boolean | { preserveSelection?: b
 			appVersion: generalAppVersion.value,
 			provider: drawer.form.provider,
 			ossConfigId: drawer.form.ossConfigId,
-			bucketName: drawer.form.bucketName || undefined,
 			rootPath: drawer.form.rootPath || undefined,
 		});
 		const list = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];

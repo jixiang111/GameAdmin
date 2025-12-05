@@ -153,13 +153,16 @@ public sealed class ClientVersionRuleSaveInput
     [Required]
     public ClientPlatform Platform { get; set; }
 
-    [Required, MaxLength(32)]
-    public string Provider { get; set; } = "aliyun";
+    [MaxLength(32)]
+    public string? Provider { get; set; } = "aliyun";
 
     public long? OssConfigId { get; set; }
 
-    [Required, MaxLength(128)]
-    public string BucketName { get; set; }
+    /// <summary>
+    /// 可选，留空则从 OssConfigId 对应的配置中读取
+    /// </summary>
+    [MaxLength(128)]
+    public string? BucketName { get; set; }
 
     [MaxLength(256)]
     public string? RootPath { get; set; }

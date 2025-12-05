@@ -848,10 +848,18 @@ public class ClientVersionService : IDynamicApiController, ITransient
         string rootPath;
         if (rule == null)
         {
+            // 优先使用 bucketOverride，否则使用 ossConfig 中的 BucketName
             if (string.IsNullOrWhiteSpace(bucketOverride))
-                throw Oops.Oh("请先配置对应渠道的规则，或临时传入 Bucket / RootPath");
-            bucketName = bucketOverride.Trim();
-            rootPath = NormalizeRootPathForStorage(rootOverride);
+            {
+                if (string.IsNullOrWhiteSpace(config.BucketName))
+                    throw Oops.Oh("请先配置对应渠道的规则，或在对象存储配置中设置 Bucket");
+                bucketName = config.BucketName;
+            }
+            else
+            {
+                bucketName = bucketOverride.Trim();
+            }
+            rootPath = NormalizeRootPathForStorage(string.IsNullOrWhiteSpace(rootOverride) ? config.RootPath : rootOverride);
         }
         else
         {
@@ -1586,7 +1594,6 @@ public class ClientVersionService : IDynamicApiController, ITransient
 
 
     #endregion
-
     #region 私有方法 - RPC 同步
 
     /// <summary>
