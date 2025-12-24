@@ -104,7 +104,6 @@
 					<el-input
 						v-model="drawer.form.channelId"
 						placeholder="渠道唯一标识，如 official、taptap"
-						:disabled="!!drawer.form.ruleId"
 						@blur="syncChannelName"
 					/>
 				</el-form-item>
@@ -521,6 +520,18 @@ const syncChannelName = () => {
 	}
 };
 
+const hasDuplicateChannelId = async () => {
+	const channelId = drawer.form.channelId?.trim();
+	if (!channelId || !drawer.form.platform) return false;
+	const res: any = await getRuleList({ channelId, platform: drawer.form.platform });
+	const list = res?.data?.result ?? res?.data?.data ?? res?.data ?? [];
+	const currentRuleId = drawer.form.ruleId;
+	return list.some((item: ClientVersionRuleOutput) => {
+		if (currentRuleId === undefined || currentRuleId === null) return true;
+		return String(item.ruleId) !== String(currentRuleId);
+	});
+};
+
 const onPlatformChange = () => {
 	whitelistAppVersion.value = '';
 	whitelistResVersion.value = '';
@@ -919,6 +930,20 @@ const resetDrawer = () => {
 const submitDrawer = () => {
 	drawerFormRef.value?.validate(async (valid) => {
 		if (!valid) return;
+
+		if (drawer.form.channelId) {
+			drawer.form.channelId = drawer.form.channelId.trim();
+		}
+
+		try {
+			if (await hasDuplicateChannelId()) {
+				ElMessage.error('渠道ID已存在，无法保存');
+				return;
+			}
+		} catch (error: any) {
+			ElMessage.error(error?.response?.data?.message || error?.message || '渠道ID校验失败');
+			return;
+		}
 
 		let whitelistVersionInfo: ClientAppVersionInfoDto | undefined;
 		if (whitelistAppVersion.value && whitelistResVersion.value) {
