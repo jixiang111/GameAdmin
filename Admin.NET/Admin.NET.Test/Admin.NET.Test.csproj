@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <NoWarn>1701;1702;1591;8632</NoWarn>
     <DocumentationFile></DocumentationFile>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,6 +8,7 @@
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Copyright>Admin.NET</Copyright>
     <Description>Admin.NET 通用权限开发平台</Description>
+    <TargetFramework>net9.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
