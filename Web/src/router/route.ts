@@ -1,4 +1,4 @@
-import { RouteRecordRaw } from 'vue-router';
+﻿import { RouteRecordRaw } from 'vue-router';
 
 declare module 'vue-router' {
 	interface RouteMeta {
@@ -22,6 +22,17 @@ export const serverManageRoute: RouteRecordRaw = {
 		title: '服务器管理',
 		isKeepAlive: true,
 		icon: 'ele-DataLine',
+	},
+};
+
+export const gameServerItemAuditRoute: RouteRecordRaw = {
+	path: '/dashboard/server-item-audit',
+	name: 'gameServerItemAudit',
+	component: () => import('/@/views/workbench/server/itemAudit.vue'),
+	meta: {
+		title: '道具流水',
+		isKeepAlive: true,
+		icon: 'ele-Histogram',
 	},
 };
 
@@ -85,6 +96,26 @@ export const serverManageMenuRaw = {
 	children: [],
 };
 
+export const gameServerItemAuditMenuRaw = {
+	id: 0,
+	pid: 0,
+	type: 2,
+	name: 'gameServerItemAudit',
+	path: '/dashboard/server-item-audit',
+	component: '/workbench/server/itemAudit',
+	permission: 'gameServerItemAudit:page',
+	orderNo: 102,
+	status: 1,
+	meta: {
+		title: '道具流水',
+		icon: 'ele-Histogram',
+		isKeepAlive: true,
+		isHide: false,
+		isIframe: false,
+	},
+	children: [],
+};
+
 export const clientVersionMenuRaw = {
 	id: 0,
 	pid: 0,
@@ -92,7 +123,7 @@ export const clientVersionMenuRaw = {
 	name: 'clientVersion',
 	path: '/dashboard/client-version',
 	component: 'layout/routerView/parent',
-	orderNo: 102,
+	orderNo: 103,
 	meta: {
 		title: '客户端版本管理',
 		icon: 'ele-Setting',
@@ -150,7 +181,7 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 		meta: {
 			isKeepAlive: true,
 		},
-		children: [serverManageRoute, clientVersionRoute],
+		children: [serverManageRoute, gameServerItemAuditRoute, clientVersionRoute],
 	},
 	{
 		path: '/platform/job/dashboard',
@@ -171,7 +202,7 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 		name: 'databaseVisual',
 		component: () => import('/@/views/system/database/component/visualTable.vue'),
 		meta: {
-			title: '库表可视化',
+			title: '数据库可视化',
 			isHide: true,
 			isKeepAlive: true,
 			isAffix: false,

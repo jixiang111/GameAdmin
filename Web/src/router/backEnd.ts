@@ -1,10 +1,10 @@
-import { RouteRecordRaw } from 'vue-router';
+﻿import { RouteRecordRaw } from 'vue-router';
 import pinia from '/@/stores/index';
 import { useUserInfo } from '/@/stores/userInfo';
 import { useRequestOldRoutes } from '/@/stores/requestOldRoutes';
 import { Session } from '/@/utils/storage';
 import { NextLoading } from '/@/utils/loading';
-import { dynamicRoutes, notFoundAndNoPower, serverManageMenuRaw, clientVersionMenuRaw } from '/@/router/route';
+import { dynamicRoutes, notFoundAndNoPower, serverManageMenuRaw, gameServerItemAuditMenuRaw, clientVersionMenuRaw } from '/@/router/route';
 import { formatTwoStageRoutes, formatFlatteningRoutes, router } from '/@/router/index';
 import { useRoutesList } from '/@/stores/routesList';
 import { useTagsViewRoutes } from '/@/stores/tagsViewRoutes';
@@ -13,36 +13,36 @@ import { getAPI } from '/@/utils/axios-utils';
 import { SysMenuApi } from '/@/api-services/api';
 // import { ElMessage } from 'element-plus';
 
-// 后端控制路由
+// 鍚庣鎺у埗璺敱
 
 /**
- * 获取目录下的 .vue、.tsx 全部文件
+ * 鑾峰彇鐩綍涓嬬殑 .vue銆?tsx 鍏ㄩ儴鏂囦欢
  * @method import.meta.glob
- * @link 参考：https://cn.vitejs.dev/guide/features.html#json
+ * @link 鍙傝€冿細https://cn.vitejs.dev/guide/features.html#json
  */
 const layouModules: any = import.meta.glob('../layout/routerView/*.{vue,tsx}');
 const viewsModules: any = import.meta.glob('../views/**/*.{vue,tsx}');
 const dynamicViewsModules: Record<string, Function> = Object.assign({}, { ...layouModules }, { ...viewsModules });
 
 /**
- * 后端控制路由：初始化方法，防止刷新时路由丢失
- * @method NextLoading 界面 loading 动画开始执行
- * @method useUserInfo().setUserInfos() 触发初始化用户信息 pinia
- * @method useRequestOldRoutes().setRequestOldRoutes() 存储接口原始路由（未处理component），根据需求选择使用
- * @method setAddRoute 添加动态路由
- * @method setFilterMenuAndCacheTagsViewRoutes 设置路由到 pinia routesList 中（已处理成多级嵌套路由）及缓存多级嵌套数组处理后的一维数组
+ * 鍚庣鎺у埗璺敱锛氬垵濮嬪寲鏂规硶锛岄槻姝㈠埛鏂版椂璺敱涓㈠け
+ * @method NextLoading 鐣岄潰 loading 鍔ㄧ敾寮€濮嬫墽琛?
+ * @method useUserInfo().setUserInfos() 瑙﹀彂鍒濆鍖栫敤鎴蜂俊鎭?pinia
+ * @method useRequestOldRoutes().setRequestOldRoutes() 瀛樺偍鎺ュ彛鍘熷璺敱锛堟湭澶勭悊component锛夛紝鏍规嵁闇€姹傞€夋嫨浣跨敤
+ * @method setAddRoute 娣诲姞鍔ㄦ€佽矾鐢?
+ * @method setFilterMenuAndCacheTagsViewRoutes 璁剧疆璺敱鍒?pinia routesList 涓紙宸插鐞嗘垚澶氱骇宓屽璺敱锛夊強缂撳瓨澶氱骇宓屽鏁扮粍澶勭悊鍚庣殑涓€缁存暟缁?
  */
 export async function initBackEndControlRoutes() {
 
-	// 界面 loading 动画开始执行
+	// 鐣岄潰 loading 鍔ㄧ敾寮€濮嬫墽琛?
 
 	if (window.nextLoading === undefined) NextLoading.start();
 
-	// 无 token 停止执行下一步
+	// 鏃?token 鍋滄鎵ц涓嬩竴姝?
 
 	if (!Session.get('token')) return false;
 
-	// 触发初始化用户信息 pinia
+	// 瑙﹀彂鍒濆鍖栫敤鎴蜂俊鎭?pinia
 
 	// https://gitee.com/lyt-top/vue-next-admin/issues/I5F1HP
 
@@ -52,32 +52,32 @@ export async function initBackEndControlRoutes() {
 
 	await useUserInfo().setDictList();
 
-	// 获取路由菜单数据并强制追加服务器管理入口
+	// 鑾峰彇璺敱鑿滃崟鏁版嵁骞跺己鍒惰拷鍔犳湇鍔″櫒绠＄悊鍏ュ彛
 
 	const rawRoutes = await getBackEndControlRoutes();
 
 	const sanitizedRoutes = removeDisabledMenus(rawRoutes);
 	const res = ensureBaseWorkbenchMenus(sanitizedRoutes);
 
-	// 无登录权限时，添加判断
+	// 鏃犵櫥褰曟潈闄愭椂锛屾坊鍔犲垽鏂?
 
 	// https://gitee.com/lyt-top/vue-next-admin/issues/I64HVO
 
 	if (res == undefined || res.length <= 0) return Promise.resolve(true);
 
-	// 存储接口原始路由（未处理component），根据需求选择使用
+	// 瀛樺偍鎺ュ彛鍘熷璺敱锛堟湭澶勭悊component锛夛紝鏍规嵁闇€姹傞€夋嫨浣跨敤
 
 	useRequestOldRoutes().setRequestOldRoutes(res as string[]);
 
-	// 处理路由（component），替换 dynamicRoutes（/@/router/route）第一个顶级 children 的路由
+	// 澶勭悊璺敱锛坈omponent锛夛紝鏇挎崲 dynamicRoutes锛?@/router/route锛夌涓€涓《绾?children 鐨勮矾鐢?
 
 	dynamicRoutes[0].children = await backEndComponent(res);
 
-	// 添加动态路由
+	// 娣诲姞鍔ㄦ€佽矾鐢?
 
 	await setAddRoute();
 
-	// 设置路由到 pinia routesList 中（已处理成多级嵌套路由）及缓存多级嵌套数组处理后的一维数据
+	// 璁剧疆璺敱鍒?pinia routesList 涓紙宸插鐞嗘垚澶氱骇宓屽璺敱锛夊強缂撳瓨澶氱骇宓屽鏁扮粍澶勭悊鍚庣殑涓€缁存暟鎹?
 
 	setFilterMenuAndCacheTagsViewRoutes();
 
@@ -86,9 +86,9 @@ export async function initBackEndControlRoutes() {
 
 
 /**
- * 设置路由到 pinia routesList 中（已处理成多级嵌套路由）及缓存多级嵌套数组处理后的一维数组
- * @description 用于左侧菜单、横向菜单的显示
- * @description 用于 tagsView、菜单搜索中：未过滤隐藏的(isHide)
+ * 璁剧疆璺敱鍒?pinia routesList 涓紙宸插鐞嗘垚澶氱骇宓屽璺敱锛夊強缂撳瓨澶氱骇宓屽鏁扮粍澶勭悊鍚庣殑涓€缁存暟缁?
+ * @description 鐢ㄤ簬宸︿晶鑿滃崟銆佹í鍚戣彍鍗曠殑鏄剧ず
+ * @description 鐢ㄤ簬 tagsView銆佽彍鍗曟悳绱腑锛氭湭杩囨护闅愯棌鐨?isHide)
  */
 export async function setFilterMenuAndCacheTagsViewRoutes() {
 	const storesRoutesList = useRoutesList(pinia);
@@ -97,8 +97,8 @@ export async function setFilterMenuAndCacheTagsViewRoutes() {
 }
 
 /**
- * 缓存多级嵌套数组处理后的一维数组
- * @description 用于 tagsView、菜单搜索中：未过滤隐藏的(isHide)
+ * 缂撳瓨澶氱骇宓屽鏁扮粍澶勭悊鍚庣殑涓€缁存暟缁?
+ * @description 鐢ㄤ簬 tagsView銆佽彍鍗曟悳绱腑锛氭湭杩囨护闅愯棌鐨?isHide)
  */
 export function setCacheTagsViewRoutes() {
 	const storesTagsView = useTagsViewRoutes(pinia);
@@ -106,23 +106,23 @@ export function setCacheTagsViewRoutes() {
 }
 
 /**
- * 处理路由格式及添加捕获所有路由或 404 Not found 路由
- * @description 替换 dynamicRoutes（/@/router/route）第一个顶级 children 的路由
- * @returns 返回替换后的路由数组
+ * 澶勭悊璺敱鏍煎紡鍙婃坊鍔犳崟鑾锋墍鏈夎矾鐢辨垨 404 Not found 璺敱
+ * @description 鏇挎崲 dynamicRoutes锛?@/router/route锛夌涓€涓《绾?children 鐨勮矾鐢?
+ * @returns 杩斿洖鏇挎崲鍚庣殑璺敱鏁扮粍
  */
 export function setFilterRouteEnd() {
 	let filterRouteEnd: any = formatTwoStageRoutes(formatFlatteningRoutes(dynamicRoutes));
-	// notFoundAndNoPower 防止 404、401 不在 layout 布局中，不设置的话，404、401 界面将全屏显示
-	// 关联问题 No match found for location with path 'xxx'
+	// notFoundAndNoPower 闃叉 404銆?01 涓嶅湪 layout 甯冨眬涓紝涓嶈缃殑璇濓紝404銆?01 鐣岄潰灏嗗叏灞忔樉绀?
+	// 鍏宠仈闂 No match found for location with path 'xxx'
 	filterRouteEnd[0].children = [...filterRouteEnd[0].children, ...notFoundAndNoPower];
 	return filterRouteEnd;
 }
 
 /**
- * 添加动态路由
+ * 娣诲姞鍔ㄦ€佽矾鐢?
  * @method router.addRoute
- * @description 此处循环为 dynamicRoutes（/@/router/route）第一个顶级 children 的路由一维数组，非多级嵌套
- * @link 参考：https://next.router.vuejs.org/zh/api/#addroute
+ * @description 姝ゅ寰幆涓?dynamicRoutes锛?@/router/route锛夌涓€涓《绾?children 鐨勮矾鐢变竴缁存暟缁勶紝闈炲绾у祵濂?
+ * @link 鍙傝€冿細https://next.router.vuejs.org/zh/api/#addroute
  */
 export async function setAddRoute() {
 	await setFilterRouteEnd().forEach((route: RouteRecordRaw) => {
@@ -131,14 +131,14 @@ export async function setAddRoute() {
 }
 
 /**
- * 请求后端路由菜单接口
- * @description isRequestRoutes 为 true，则开启后端控制路由
- * @returns 返回后端路由菜单数据
+ * 璇锋眰鍚庣璺敱鑿滃崟鎺ュ彛
+ * @description isRequestRoutes 涓?true锛屽垯寮€鍚悗绔帶鍒惰矾鐢?
+ * @returns 杩斿洖鍚庣璺敱鑿滃崟鏁版嵁
  */
 export async function getBackEndControlRoutes() {
 	var res = await getAPI(SysMenuApi).apiSysMenuLoginMenuTreeGet();
 	// if (res.data.result == undefined || res.data.result.length < 1) {
-	// 	ElMessage.error('没有任何菜单权限，请联系管理员！');
+	// 	ElMessage.error('娌℃湁浠讳綍鑿滃崟鏉冮檺锛岃鑱旂郴绠＄悊鍛橈紒');
 	// 	setTimeout(() => {
 	// 		Session.removeToken();
 	// 		window.location.reload();
@@ -149,13 +149,13 @@ export async function getBackEndControlRoutes() {
 
 /**
 
- * 追加服务器管理菜单项，确保前端始终可见
+ * 杩藉姞鏈嶅姟鍣ㄧ鐞嗚彍鍗曢」锛岀‘淇濆墠绔缁堝彲瑙?
 
  */
 
 const DISABLED_MENU_NAMES = ['develop', 'doc', 'clientVersion'];
 const DISABLED_MENU_TITLES = ['开发工具', '帮助文档', '客户端版本管理'];
-const BASE_WORKBENCH_MENUS = [serverManageMenuRaw, clientVersionMenuRaw];
+const BASE_WORKBENCH_MENUS = [serverManageMenuRaw, gameServerItemAuditMenuRaw, clientVersionMenuRaw];
 
 function ensureBaseWorkbenchMenus(routes: any) {
 	const list = Array.isArray(routes) ? [...routes] : [];
@@ -203,23 +203,23 @@ function removeDisabledMenus(routes: any) {
 
 
 /**
- * 重新请求后端路由菜单接口
- * @description 用于菜单管理界面刷新菜单（未进行测试）
- * @description 路径：/src/views/system/menu/component/addMenu.vue
+ * 閲嶆柊璇锋眰鍚庣璺敱鑿滃崟鎺ュ彛
+ * @description 鐢ㄤ簬鑿滃崟绠＄悊鐣岄潰鍒锋柊鑿滃崟锛堟湭杩涜娴嬭瘯锛?
+ * @description 璺緞锛?src/views/system/menu/component/addMenu.vue
  */
 export async function setBackEndControlRefreshRoutes() {
 	await getBackEndControlRoutes();
 }
 
 /**
- * 后端路由 component 转换
- * @param routes 后端返回的路由表数组
- * @returns 返回处理成函数后的 component
+ * 鍚庣璺敱 component 杞崲
+ * @param routes 鍚庣杩斿洖鐨勮矾鐢辫〃鏁扮粍
+ * @returns 杩斿洖澶勭悊鎴愬嚱鏁板悗鐨?component
  */
 export function backEndComponent(routes: any) {
 	if (!routes) return;
 	return routes.map((item: any) => {
-		if (!item.path) item.path = ''; // 防止后端返回的路由没有path属性，导致路由报错
+		if (!item.path) item.path = ''; // 闃叉鍚庣杩斿洖鐨勮矾鐢辨病鏈塸ath灞炴€э紝瀵艰嚧璺敱鎶ラ敊
 		if (item.component) item.component = dynamicImport(dynamicViewsModules, item.component as string);
 		item.children && backEndComponent(item.children);
 		return item;
@@ -227,10 +227,10 @@ export function backEndComponent(routes: any) {
 }
 
 /**
- * 后端路由 component 转换函数
- * @param dynamicViewsModules 获取目录下的 .vue、.tsx 全部文件
- * @param component 当前要处理项 component
- * @returns 返回处理成函数后的 component
+ * 鍚庣璺敱 component 杞崲鍑芥暟
+ * @param dynamicViewsModules 鑾峰彇鐩綍涓嬬殑 .vue銆?tsx 鍏ㄩ儴鏂囦欢
+ * @param component 褰撳墠瑕佸鐞嗛」 component
+ * @returns 杩斿洖澶勭悊鎴愬嚱鏁板悗鐨?component
  */
 export function dynamicImport(dynamicViewsModules: Record<string, Function>, component: string) {
 	const keys = Object.keys(dynamicViewsModules);
@@ -246,3 +246,5 @@ export function dynamicImport(dynamicViewsModules: Record<string, Function>, com
 		return false;
 	}
 }
+
+

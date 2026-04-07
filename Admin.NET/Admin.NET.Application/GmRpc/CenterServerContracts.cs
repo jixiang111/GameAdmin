@@ -13,6 +13,7 @@ public interface ICenterGmService : IService<ICenterGmService>
 {
     UnaryResult<CenterServerListRes> GetGameServerList();
     UnaryResult<CenterServerOpRes> UpdateGameServer(CenterServerUpdateReq request);
+    UnaryResult<CenterGmQueryItemChangeLogRes> QueryItemChangeLogs(CenterGmQueryItemChangeLogReq request);
 
     UnaryResult<CenterVersionRuleListRes> ListAppVersionRules();
     UnaryResult<CenterVersionRuleOpRes> UpsertAppVersionRule(CenterVersionRuleReq request);
@@ -55,6 +56,88 @@ public class CenterServerUpdateReq
     public int? TcpPort { get; set; }
     public string WebSocketUrl { get; set; }
     public int? GrpcPort { get; set; }
+}
+
+[MessagePackObject(true)]
+public class CenterGmQueryItemChangeLogReq
+{
+    public int ServerId { get; set; }
+    public GmQueryItemChangeLogReq Query { get; set; } = new();
+}
+
+[MessagePackObject(true)]
+public class CenterGmQueryItemChangeLogRes
+{
+    public bool Success { get; set; }
+    public string Message { get; set; }
+    public int ServerId { get; set; }
+    public GmQueryItemChangeLogRes Data { get; set; } = new();
+}
+
+[MessagePackObject(true)]
+public class GmQueryItemChangeLogReq
+{
+    public long RoleId { get; set; }
+    public int ItemId { get; set; }
+    public ItemChangeSourceType SourceType { get; set; } = ItemChangeSourceType.Unknown;
+    public ItemChangeOperationType OperationType { get; set; } = ItemChangeOperationType.Unknown;
+    public long OperatorId { get; set; }
+    public string TraceId { get; set; } = string.Empty;
+    public string ReasonCode { get; set; } = string.Empty;
+    public long StartTimeTicksUtc { get; set; }
+    public long EndTimeTicksUtc { get; set; }
+    public int PageIndex { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+}
+
+[MessagePackObject(true)]
+public class GmQueryItemChangeLogRes
+{
+    public int Total { get; set; }
+    public int PageIndex { get; set; }
+    public int PageSize { get; set; }
+    public bool HasMore { get; set; }
+    public int ServerId { get; set; }
+    public string ServerName { get; set; } = string.Empty;
+    public IReadOnlyList<GmItemChangeLogDto> Items { get; set; } = Array.Empty<GmItemChangeLogDto>();
+}
+
+[MessagePackObject(true)]
+public class GmItemChangeLogDto
+{
+    public long LogId { get; set; }
+    public long RoleId { get; set; }
+    public int ItemId { get; set; }
+    public long BeforeNum { get; set; }
+    public long AfterNum { get; set; }
+    public long Delta { get; set; }
+    public ItemChangeSourceType SourceType { get; set; } = ItemChangeSourceType.Unknown;
+    public ItemChangeOperationType OperationType { get; set; } = ItemChangeOperationType.Unknown;
+    public string ReasonCode { get; set; } = string.Empty;
+    public string Remark { get; set; } = string.Empty;
+    public long OperatorId { get; set; }
+    public string OperatorName { get; set; } = string.Empty;
+    public string TraceId { get; set; } = string.Empty;
+    public string RequestUniId { get; set; } = string.Empty;
+    public long ChangeTimeTicks { get; set; }
+}
+
+public enum ItemChangeSourceType
+{
+    Unknown = 0,
+    Client = 1,
+    Gm = 2,
+    System = 3
+}
+
+public enum ItemChangeOperationType
+{
+    Unknown = 0,
+    Adjust = 1,
+    Use = 2,
+    Expire = 3,
+    Sell = 4,
+    GmAdjust = 5
 }
 
 [MessagePackObject(true)]

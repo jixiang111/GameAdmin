@@ -29,6 +29,8 @@ public interface ICenterServerRpcClient
 
     Task<CenterServerInfoDto> UpsertGameServerAsync(CenterServerUpdateReq request, CancellationToken cancellationToken = default);
 
+    Task<GmQueryItemChangeLogRes> QueryItemChangeLogsAsync(CenterGmQueryItemChangeLogReq request, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<CenterVersionRuleDto>> ListAppVersionRulesAsync(CancellationToken cancellationToken = default);
 
     Task<CenterVersionRuleDto> UpsertAppVersionRuleAsync(CenterVersionRuleReq request, CancellationToken cancellationToken = default);
@@ -72,6 +74,24 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
         var result = await client.UpdateGameServer(request);
         EnsureRpcSuccess(result?.Success ?? false, result?.Message, "更新游戏服失败");
         return result?.Data;
+    }
+
+    public async Task<GmQueryItemChangeLogRes> QueryItemChangeLogsAsync(CenterGmQueryItemChangeLogReq request, CancellationToken cancellationToken = default)
+    {
+        if (request == null) throw Oops.Oh("请求参数不能为空");
+        if (request.Query == null) throw Oops.Oh("查询参数不能为空");
+
+        var client = DecorateClient(CreateClient(), cancellationToken);
+        var result = await client.QueryItemChangeLogs(request);
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "查询道具变化流水失败");
+
+        return result?.Data ?? new GmQueryItemChangeLogRes
+        {
+            ServerId = request.ServerId,
+            PageIndex = request.Query.PageIndex,
+            PageSize = request.Query.PageSize,
+            Items = Array.Empty<GmItemChangeLogDto>()
+        };
     }
 
     public async Task<IReadOnlyList<CenterVersionRuleDto>> ListAppVersionRulesAsync(CancellationToken cancellationToken = default)
