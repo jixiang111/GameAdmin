@@ -13,6 +13,7 @@ public interface ICenterGmService : IService<ICenterGmService>
 {
     UnaryResult<CenterServerListRes> GetGameServerList();
     UnaryResult<CenterServerOpRes> UpdateGameServer(CenterServerUpdateReq request);
+    UnaryResult<CenterGmAdjustPlayerItemRes> AdjustPlayerItem(CenterGmAdjustPlayerItemReq request);
     UnaryResult<CenterGmQueryItemChangeLogRes> QueryItemChangeLogs(CenterGmQueryItemChangeLogReq request);
 
     UnaryResult<CenterVersionRuleListRes> ListAppVersionRules();
@@ -56,6 +57,46 @@ public class CenterServerUpdateReq
     public int? TcpPort { get; set; }
     public string WebSocketUrl { get; set; }
     public int? GrpcPort { get; set; }
+}
+
+[MessagePackObject(true)]
+public class CenterGmAdjustPlayerItemReq
+{
+    public int ServerId { get; set; }
+    public GmAdjustPlayerItemReq Request { get; set; } = new();
+}
+
+[MessagePackObject(true)]
+public class CenterGmAdjustPlayerItemRes
+{
+    public bool Success { get; set; }
+    public string Message { get; set; }
+    public int ServerId { get; set; }
+    public GmAdjustPlayerItemRes Data { get; set; } = new();
+}
+
+[MessagePackObject(true)]
+public class GmAdjustPlayerItemReq
+{
+    public long RoleId { get; set; }
+    public int ItemId { get; set; }
+    public long Delta { get; set; }
+    public string ReasonCode { get; set; } = string.Empty;
+    public string Remark { get; set; } = string.Empty;
+    public long OperatorId { get; set; }
+    public string OperatorName { get; set; } = string.Empty;
+    public string TraceId { get; set; } = string.Empty;
+}
+
+[MessagePackObject(true)]
+public class GmAdjustPlayerItemRes
+{
+    public long BeforeNum { get; set; }
+    public long AfterNum { get; set; }
+    public long AppliedDelta { get; set; }
+    public long ChangeTimeTicks { get; set; }
+    public long RoleId { get; set; }
+    public int ItemId { get; set; }
 }
 
 [MessagePackObject(true)]

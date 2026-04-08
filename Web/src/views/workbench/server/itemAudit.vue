@@ -235,6 +235,14 @@ function initQueryFromRoute() {
 			query.itemId = itemId;
 		}
 	}
+
+	if (typeof route.query.traceId === 'string') {
+		query.traceId = route.query.traceId.trim();
+	}
+
+	if (typeof route.query.reasonCode === 'string') {
+		query.reasonCode = route.query.reasonCode.trim();
+	}
 }
 
 function toUtcTicksString(date: Date | undefined) {
@@ -490,3 +498,5 @@ onMounted(async () => {
 	}
 }
 </style>
+
+

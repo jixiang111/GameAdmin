@@ -36,6 +36,17 @@ export const gameServerItemAuditRoute: RouteRecordRaw = {
 	},
 };
 
+export const gameServerItemAdjustRoute: RouteRecordRaw = {
+	path: '/dashboard/server-item-adjust',
+	name: 'gameServerItemAdjust',
+	component: () => import('/@/views/workbench/server/itemAdjust.vue'),
+	meta: {
+		title: '道具调整',
+		isKeepAlive: true,
+		icon: 'ele-Operation',
+	},
+};
+
 export const clientVersionRoute: RouteRecordRaw = {
 	path: '/dashboard/client-version',
 	name: 'clientVersion',
@@ -116,6 +127,26 @@ export const gameServerItemAuditMenuRaw = {
 	children: [],
 };
 
+export const gameServerItemAdjustMenuRaw = {
+	id: 0,
+	pid: 0,
+	type: 2,
+	name: 'gameServerItemAdjust',
+	path: '/dashboard/server-item-adjust',
+	component: '/workbench/server/itemAdjust',
+	permission: 'gameServerItemAdjust:submit',
+	orderNo: 103,
+	status: 1,
+	meta: {
+		title: '道具调整',
+		icon: 'ele-Operation',
+		isKeepAlive: true,
+		isHide: false,
+		isIframe: false,
+	},
+	children: [],
+};
+
 export const clientVersionMenuRaw = {
 	id: 0,
 	pid: 0,
@@ -123,7 +154,7 @@ export const clientVersionMenuRaw = {
 	name: 'clientVersion',
 	path: '/dashboard/client-version',
 	component: 'layout/routerView/parent',
-	orderNo: 103,
+	orderNo: 104,
 	meta: {
 		title: '客户端版本管理',
 		icon: 'ele-Setting',
@@ -181,7 +212,7 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 		meta: {
 			isKeepAlive: true,
 		},
-		children: [serverManageRoute, gameServerItemAuditRoute, clientVersionRoute],
+		children: [serverManageRoute, gameServerItemAuditRoute, gameServerItemAdjustRoute, clientVersionRoute],
 	},
 	{
 		path: '/platform/job/dashboard',

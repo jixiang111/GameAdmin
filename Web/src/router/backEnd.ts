@@ -4,7 +4,7 @@ import { useUserInfo } from '/@/stores/userInfo';
 import { useRequestOldRoutes } from '/@/stores/requestOldRoutes';
 import { Session } from '/@/utils/storage';
 import { NextLoading } from '/@/utils/loading';
-import { dynamicRoutes, notFoundAndNoPower, serverManageMenuRaw, gameServerItemAuditMenuRaw, clientVersionMenuRaw } from '/@/router/route';
+import { dynamicRoutes, notFoundAndNoPower, serverManageMenuRaw, gameServerItemAuditMenuRaw, gameServerItemAdjustMenuRaw, clientVersionMenuRaw } from '/@/router/route';
 import { formatTwoStageRoutes, formatFlatteningRoutes, router } from '/@/router/index';
 import { useRoutesList } from '/@/stores/routesList';
 import { useTagsViewRoutes } from '/@/stores/tagsViewRoutes';
@@ -155,7 +155,7 @@ export async function getBackEndControlRoutes() {
 
 const DISABLED_MENU_NAMES = ['develop', 'doc', 'clientVersion'];
 const DISABLED_MENU_TITLES = ['开发工具', '帮助文档', '客户端版本管理'];
-const BASE_WORKBENCH_MENUS = [serverManageMenuRaw, gameServerItemAuditMenuRaw, clientVersionMenuRaw];
+const BASE_WORKBENCH_MENUS = [serverManageMenuRaw, gameServerItemAuditMenuRaw, gameServerItemAdjustMenuRaw, clientVersionMenuRaw];
 
 function ensureBaseWorkbenchMenus(routes: any) {
 	const list = Array.isArray(routes) ? [...routes] : [];
@@ -246,5 +246,6 @@ export function dynamicImport(dynamicViewsModules: Record<string, Function>, com
 		return false;
 	}
 }
+
 
 

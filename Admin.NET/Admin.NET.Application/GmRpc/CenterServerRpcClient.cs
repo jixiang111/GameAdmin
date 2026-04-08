@@ -1,9 +1,6 @@
-// Admin.NET 项目的版权、商标、专利和其他相关权利均受相应法律法规的保护。使用本项目应遵守相关法律法规和许可证的要求。
-//
-// 本项目主要遵守 MIT 许可证和 Apache 许可证（版本 2.0）进行分发和使用。许可证位于源代码树根目录中的 LICENSE-MIT 与 LICENSE-APACHE 文件。
-//
-// 不得利用本项目从事危害国家安全、扰乱社会秩序、侵犯他人合法权益等法律法规禁止的活动！任何基于本项目二次开发而产生的一切法律纠纷和责任，我们不承担任何责任。
-
+﻿// Admin.NET 椤圭洰鐨勭増鏉冦€佸晢鏍囥€佷笓鍒╁拰鍏朵粬鐩稿叧鏉冨埄鍧囧彈鐩稿簲娉曞緥娉曡鐨勪繚鎶ゃ€備娇鐢ㄦ湰椤圭洰搴旈伒瀹堢浉鍏虫硶寰嬫硶瑙勫拰璁稿彲璇佺殑瑕佹眰銆?//
+// 鏈」鐩富瑕侀伒瀹?MIT 璁稿彲璇佸拰 Apache 璁稿彲璇侊紙鐗堟湰 2.0锛夎繘琛屽垎鍙戝拰浣跨敤銆傝鍙瘉浣嶄簬婧愪唬鐮佹爲鏍圭洰褰曚腑鐨?LICENSE-MIT 涓?LICENSE-APACHE 鏂囦欢銆?//
+// 涓嶅緱鍒╃敤鏈」鐩粠浜嬪嵄瀹冲浗瀹跺畨鍏ㄣ€佹壈涔辩ぞ浼氱З搴忋€佷镜鐘粬浜哄悎娉曟潈鐩婄瓑娉曞緥娉曡绂佹鐨勬椿鍔紒浠讳綍鍩轰簬鏈」鐩簩娆″紑鍙戣€屼骇鐢熺殑涓€鍒囨硶寰嬬籂绾峰拰璐ｄ换锛屾垜浠笉鎵挎媴浠讳綍璐ｄ换銆?
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -28,6 +25,8 @@ public interface ICenterServerRpcClient
     Task<IReadOnlyList<CenterServerInfoDto>> GetGameServerListAsync(CancellationToken cancellationToken = default);
 
     Task<CenterServerInfoDto> UpsertGameServerAsync(CenterServerUpdateReq request, CancellationToken cancellationToken = default);
+
+    Task<GmAdjustPlayerItemRes> AdjustPlayerItemAsync(CenterGmAdjustPlayerItemReq request, CancellationToken cancellationToken = default);
 
     Task<GmQueryItemChangeLogRes> QueryItemChangeLogsAsync(CenterGmQueryItemChangeLogReq request, CancellationToken cancellationToken = default);
 
@@ -62,28 +61,46 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
     {
         var client = DecorateClient(CreateClient(), cancellationToken);
         var result = await client.GetGameServerList();
-        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "获取游戏服列表失败");
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "鑾峰彇娓告垙鏈嶅垪琛ㄥけ璐?);
         return result?.Items ?? null;
     }
 
     public async Task<CenterServerInfoDto> UpsertGameServerAsync(CenterServerUpdateReq request, CancellationToken cancellationToken = default)
     {
-        if (request == null) throw Oops.Oh("请求参数不能为空");
+        if (request == null) throw Oops.Oh("璇锋眰鍙傛暟涓嶈兘涓虹┖");
 
         var client = DecorateClient(CreateClient(), cancellationToken);
         var result = await client.UpdateGameServer(request);
-        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "更新游戏服失败");
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "鏇存柊娓告垙鏈嶅け璐?);
         return result?.Data;
+    }
+
+
+    public async Task<GmAdjustPlayerItemRes> AdjustPlayerItemAsync(CenterGmAdjustPlayerItemReq request, CancellationToken cancellationToken = default)
+    {
+        if (request == null) throw Oops.Oh("请求参数不能为空");
+        if (request.Request == null) throw Oops.Oh("调整参数不能为空");
+
+        var client = DecorateClient(CreateClient(), cancellationToken);
+        var result = await client.AdjustPlayerItem(request);
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "调整玩家道具失败");
+
+        return result?.Data ?? new GmAdjustPlayerItemRes
+        {
+            RoleId = request.Request.RoleId,
+            ItemId = request.Request.ItemId,
+            AppliedDelta = request.Request.Delta
+        };
     }
 
     public async Task<GmQueryItemChangeLogRes> QueryItemChangeLogsAsync(CenterGmQueryItemChangeLogReq request, CancellationToken cancellationToken = default)
     {
-        if (request == null) throw Oops.Oh("请求参数不能为空");
-        if (request.Query == null) throw Oops.Oh("查询参数不能为空");
+        if (request == null) throw Oops.Oh("璇锋眰鍙傛暟涓嶈兘涓虹┖");
+        if (request.Query == null) throw Oops.Oh("鏌ヨ鍙傛暟涓嶈兘涓虹┖");
 
         var client = DecorateClient(CreateClient(), cancellationToken);
         var result = await client.QueryItemChangeLogs(request);
-        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "查询道具变化流水失败");
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "鏌ヨ閬撳叿鍙樺寲娴佹按澶辫触");
 
         return result?.Data ?? new GmQueryItemChangeLogRes
         {
@@ -98,27 +115,27 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
     {
         var client = DecorateClient(CreateClient(), cancellationToken);
         var result = await client.ListAppVersionRules();
-        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "获取版本规则列表失败");
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "鑾峰彇鐗堟湰瑙勫垯鍒楄〃澶辫触");
         return result?.Items ?? Array.Empty<CenterVersionRuleDto>();
     }
 
     public async Task<CenterVersionRuleDto> UpsertAppVersionRuleAsync(CenterVersionRuleReq request, CancellationToken cancellationToken = default)
     {
-        if (request == null) throw Oops.Oh("请求参数不能为空");
+        if (request == null) throw Oops.Oh("璇锋眰鍙傛暟涓嶈兘涓虹┖");
 
         var client = DecorateClient(CreateClient(), cancellationToken);
         var result = await client.UpsertAppVersionRule(request);
-        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "同步版本规则失败");
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "鍚屾鐗堟湰瑙勫垯澶辫触");
         return result?.Data;
     }
 
     public async Task DeleteAppVersionRuleAsync(string ruleId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ruleId)) throw Oops.Oh("规则ID不能为空");
+        if (string.IsNullOrWhiteSpace(ruleId)) throw Oops.Oh("瑙勫垯ID涓嶈兘涓虹┖");
 
         var client = DecorateClient(CreateClient(), cancellationToken);
         var result = await client.DeleteAppVersionRule(ruleId);
-        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "删除版本规则失败");
+        EnsureRpcSuccess(result?.Success ?? false, result?.Message, "鍒犻櫎鐗堟湰瑙勫垯澶辫触");
     }
 
     private GrpcChannel CreateChannel()
@@ -127,7 +144,7 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
 
         var httpHandler = BuildHttpHandler();
         var address = _endpointUri.Value;
-        _logger.LogInformation("初始化 CenterServer gRPC 通道：{Address}", address);
+        _logger.LogInformation("鍒濆鍖?CenterServer gRPC 閫氶亾锛歿Address}", address);
 
         return GrpcChannel.ForAddress(address, new GrpcChannelOptions
         {
@@ -214,7 +231,7 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
         var raw = (_endpointOptions.Address ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(raw))
         {
-            throw Oops.Oh("未配置 CenterServer GM RPC 地址");
+            throw Oops.Oh("鏈厤缃?CenterServer GM RPC 鍦板潃");
         }
 
         if (!Uri.TryCreate(raw, UriKind.Absolute, out var uri))
@@ -223,7 +240,7 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
             raw = $"{scheme}://{raw}";
             if (!Uri.TryCreate(raw, UriKind.Absolute, out uri))
             {
-                throw Oops.Oh($"CenterServer GM RPC 地址格式不正确：{_endpointOptions.Address}");
+                throw Oops.Oh($"CenterServer GM RPC 鍦板潃鏍煎紡涓嶆纭細{_endpointOptions.Address}");
             }
         }
 
@@ -268,7 +285,7 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
     {
         if (!_endpointOptions.Enabled)
         {
-            throw Oops.Oh("未配置 CenterServer GM RPC 地址，请检查 GmRpc:CenterServer");
+            throw Oops.Oh("鏈厤缃?CenterServer GM RPC 鍦板潃锛岃妫€鏌?GmRpc:CenterServer");
         }
     }
 
@@ -284,3 +301,5 @@ public sealed class CenterServerRpcClient : ICenterServerRpcClient, ISingleton, 
         _disposed = true;
     }
 }
+
+
